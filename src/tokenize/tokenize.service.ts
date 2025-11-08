@@ -47,6 +47,4 @@ export class TokenizeService {
             return false
         }
     }
-
-
 }

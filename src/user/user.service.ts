@@ -804,10 +804,10 @@ export class UserService {
       const wallet = {
         owner: user._id,
         balance: 0,
-        goldWeight: 0,
+        goldWeight: '0',
       };
       console.log({message : 'user created' , user})
-
+      
       await this.internalService.createWallet(wallet)
       console.log({message : 'wallet created for user'})
 

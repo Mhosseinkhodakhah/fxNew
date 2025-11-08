@@ -8,7 +8,7 @@ export class InterserviceService {
   async createWallet(wallet: any) {
     const url = 'http://localhost:9011/wallet';
     const body = wallet;
-
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {

@@ -54,17 +54,17 @@ export class AuthService {
       // await this.redisService.lockOtp(req.ip)
 
       const smsService = new SmsService();
-      const smsResponse: any = await smsService.sendOtpMessage(
+      const smsResponse: any =  smsService.sendOtpMessage(
         phoneNumber,
         otp.toString(),
       );
 
-      if (!smsResponse.success) {
-        return {
-          message: smsResponse.msg || 'ارسال کد تایید ناموفق',
-          statusCode: 500,
-        };
-      }
+      // if (!smsResponse.success) {
+      //   return {
+      //     message: smsResponse.msg || 'ارسال کد تایید ناموفق',
+      //     statusCode: 500,
+      //   };
+      // }
 
       return {
         message: 'ارسال کد تایید موفق',
