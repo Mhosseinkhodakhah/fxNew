@@ -19,7 +19,7 @@ build:
     - echo "🔍 Scanning project for vulnerabilities..."
     - /opt/trivy/bin/trivy fs --exit-code 1 --severity HIGH,CRITICAL dist/
     - echo "📦 Zipping dist folder..."
-    - zip -r dist.zip dist package.json package-lock.json
+    - zip -r dist.zip dist package.json package-lock.json ecosystem.config.js
     - BUILD_FILE="${CI_COMMIT_SHORT_SHA}.zip"
     - REPO_NAME="artifacts"
     - GROUP="/${CI_PROJECT_NAME}"
