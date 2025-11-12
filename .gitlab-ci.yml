@@ -3,7 +3,7 @@ stages:
   - deploy
 
 variables:
-  NEXUS_BASE_URL: "http://193.105.234.15:8085"
+  NEXUS_BASE_URL: "https://repo.khanetala.ir"
   DEPLOY_SERVER: "185.7.212.157"
   DEPLOY_USER: "root"
 
