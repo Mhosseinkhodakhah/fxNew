@@ -2,7 +2,7 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { UserSchema2 } from './entities/user.entity';
+// import { UserSchema2 } from './entities/user.entity';
 import { MongooseModule } from '@nestjs/mongoose';
 import { InterserviceService } from '../interservice/interservice.service';
 import { JwtService } from '@nestjs/jwt';
@@ -13,11 +13,14 @@ import { LockerService } from 'src/locker/locker.service';
 import { RedisServiceService } from 'src/redis-service/redis-service.service';
 import { ConfigService } from '@nestjs/config';
 import { IdentityService } from 'src/identity/identity.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: 'userM', schema: UserSchema2 }]),
-    KafkaModule
+  TypeOrmModule.forFeature([
+  User]),
+  KafkaModule
   ],
   controllers: [UserController],
   providers: [

@@ -9,6 +9,4 @@ export class AppService {
       data: 'کد ورود منقضی شده است'
     }
   }
-
-
 }

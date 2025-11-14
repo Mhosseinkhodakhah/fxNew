@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import mongoose, { Connection, Model } from 'mongoose';
-import { UserDocument } from 'src/user/entities/user.entity';
+// import { UserDocument } from 'src/user/entities/user.entity';
+import { User } from 'src/user/entities/user.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class IdentityService {
-
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>
     constructor(
-        @InjectModel('userM') private userModel: Model<UserDocument>,
-        @InjectConnection() private readonly connection: Connection,
     ) { }
 
 
@@ -64,7 +66,7 @@ export class IdentityService {
             if (response.statusCode == 6) {               // if users was already exists in goldBox
                 console.log("response", response);
                 console.log("6", response.statusCode);
-                let newUser = new this.userModel({
+                let newUser =  this.userRepo.create({
                     identityStatus : 1,
                     firstName : response.user.firstName,
                     lastName : response.user.lastName,
@@ -73,10 +75,10 @@ export class IdentityService {
                     nationalCode : response.user.nationalCode,
                     birthDate : response.user.birthDate,
                 })
-                let saveUser = await newUser.save();
+                let saveUser = await this.userRepo.save(newUser);
 
                 const wallet = {
-                    owner: saveUser._id,
+                    owner: saveUser.id,
                     balance: 0,
                     goldWeight: response.user.goldWeight,
                 };
@@ -95,7 +97,7 @@ export class IdentityService {
             if (response.statusCode == 5) {                  // after identify user in goldBox
                 console.log("response", response);
                 console.log("6", response.statusCode);
-                let newUser = new this.userModel({
+                let newUser = this.userRepo.create({
                     identityStatus: 1,
                     firstName: response.user.firstName,
                     lastName: response.user.lastName,
@@ -104,10 +106,10 @@ export class IdentityService {
                     nationalCode: response.user.nationalCode,
                     birthDate: response.user.birthDate,
                 })
-                let saveUser = await newUser.save();
+                let saveUser = await  this.userRepo.save(newUser);
 
                 const wallet = {
-                    owner: saveUser._id,
+                    owner: saveUser.id,
                     balance: 0,
                     goldWeight: "0",
                 };

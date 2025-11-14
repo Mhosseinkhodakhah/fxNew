@@ -115,77 +115,77 @@ export class UserController {
     );
   }
 
-  @Post('/identity')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'identity user info' })
-  @ApiResponse({
-    status: 200,
-    description: 'the user identity info successfully',
-    schema: {
-      example: {
-        success: true,
-        message: 'the user identity info successfully',
-        error: null,
-        data: {},
-      },
-    },
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden.',
-    schema: {
-      example: {
-        success: false,
-        message: 'the ngo creation failed',
-        error: 'forbidden user',
-        data: null,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'duplicate data',
-    schema: {
-      example: {
-        success: false,
-        message: 'this project already cpmpleted',
-        error: 'duplicate project',
-        data: null,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'internal service error',
-    schema: {
-      example: {
-        success: false,
-        message: 'internal error',
-        error: 'internal service error',
-        data: null,
-      },
-    },
-  })
-  @ApiBody({
-    type: IdentityDto,
-    description: 'data must like this dto',
-  })
-  identity(
-    @Req() req: any,
-    @Res() res: any,
-    @Body(new ValidationPipe()) body: IdentityDto,
-  ) {
-    console.log('reqUser', req.user);
-    const userId = req.user.userId;
-    console.log('body', body);
+  // @Post('/identity')
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
+  // @ApiOperation({ summary: 'identity user info' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'the user identity info successfully',
+  //   schema: {
+  //     example: {
+  //       success: true,
+  //       message: 'the user identity info successfully',
+  //       error: null,
+  //       data: {},
+  //     },
+  //   },
+  // })
+  // @ApiResponse({
+  //   status: 403,
+  //   description: 'Forbidden.',
+  //   schema: {
+  //     example: {
+  //       success: false,
+  //       message: 'the ngo creation failed',
+  //       error: 'forbidden user',
+  //       data: null,
+  //     },
+  //   },
+  // })
+  // @ApiResponse({
+  //   status: 409,
+  //   description: 'duplicate data',
+  //   schema: {
+  //     example: {
+  //       success: false,
+  //       message: 'this project already cpmpleted',
+  //       error: 'duplicate project',
+  //       data: null,
+  //     },
+  //   },
+  // })
+  // @ApiResponse({
+  //   status: 500,
+  //   description: 'internal service error',
+  //   schema: {
+  //     example: {
+  //       success: false,
+  //       message: 'internal error',
+  //       error: 'internal service error',
+  //       data: null,
+  //     },
+  //   },
+  // })
+  // @ApiBody({
+  //   type: IdentityDto,
+  //   description: 'data must like this dto',
+  // })
+  // identity(
+  //   @Req() req: any,
+  //   @Res() res: any,
+  //   @Body(new ValidationPipe()) body: IdentityDto,
+  // ) {
+  //   console.log('reqUser', req.user);
+  //   const userId = req.user.userId;
+  //   console.log('body', body);
 
-    return this.lockerService.withDatabaseLock(
-      `user-identity-${userId}`,
-      () => this.userService.identity(userId, body),
-      { ttl: 5000 }
-    );
-  }
+  //   return this.lockerService.withDatabaseLock(
+  //     `user-identity-${userId}`,
+  //     () => this.userService.identity(userId, body),
+  //     { ttl: 5000 }
+  //   );
+  // }
 
   @Post('/update')
   @UseGuards(JwtAuthGuard)
@@ -965,12 +965,12 @@ export class UserController {
   }
 
 
-  @Post("/internal/user")
-  async getUserFromInternal(
-    @Body() body : any
-  ){
-    return this.userService.getByNationalCodeInternal(body)
-  }
+  // @Post("/internal/user")
+  // async getUserFromInternal(
+  //   @Body() body : any
+  // ){
+  //   return this.userService.getByNationalCodeInternal(body)
+  // }
 
 
   @Post("/internal/user/nationalCode")

@@ -12,7 +12,7 @@ import { UserService } from 'src/user/user.service';
 import { TokenizeService } from 'src/tokenize/tokenize.service';
 import { RedisServiceService } from 'src/redis-service/redis-service.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UserSchema2 } from 'src/user/entities/user.entity';
+import { User } from 'src/user/entities/user.entity';
 import { InterserviceService } from 'src/interservice/interservice.service';
 import { KafkaModule } from '../kafka/kafka.module';
 import { IdentityService } from 'src/identity/identity.service';
@@ -31,7 +31,7 @@ import { IdentityService } from 'src/identity/identity.service';
         // signOptions: { expiresIn: '7d' },  
       }),
     }),
-    MongooseModule.forFeature([{ name: 'userM', schema: UserSchema2 }])
+    // MongooseModule.forFeature([{ name: 'userM', schema: UserSchema2 }])
   ],
   controllers: [AuthController],
   providers: [AuthService,UserService,JwtAuthGuard,JwtStrategy , IdentityService , TokenizeService , RedisServiceService,InterserviceService],

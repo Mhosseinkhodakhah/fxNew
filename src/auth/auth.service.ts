@@ -9,10 +9,13 @@ import { json } from 'stream/consumers';
 import { validateOtpDto } from './dto/validateOtpDto.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UserDocument } from 'src/user/entities/user.entity';
+// import { UserDocument } from 'src/user/entities/user.entity';
+import { User } from 'src/user/entities/user.entity';
 import { refreshTokenDto } from './dto/refreshTokenDto.dto';
 import * as bcrypt from 'bcrypt';
 import { SmsService } from 'src/utils/sms';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +23,8 @@ export class AuthService {
     private redisService: RedisServiceService,
     private userServiceL: UserService,
     private tokenize: TokenizeService,
-    @InjectModel('userM') private userModel: Model<UserDocument>,
+    @InjectRepository(User)
+  private readonly userRepo: Repository<User>,
   ) {}
 
   private async otpGenerator() {
@@ -33,19 +37,16 @@ export class AuthService {
       const otp = await this.otpGenerator();
       const data = { otp: otp, date: new Date().getTime() };
 
-      let cache = await this.redisService.get(`otp:::lock:::${phoneNumber}`)
-      if (cache){
-        return {
-          message : 'کاربر گرامی تعداد درخواست شما بیش از حد مجاز می باشد.',
-          statusCode : 403,
-          error : 'کاربر گرامی تعداد درخواست شما بیش از حد مجاز می باشد'
-        }
-      }
+      // let cache = await this.redisService.get(`otp:::lock:::${phoneNumber}`)
+  
 
       const test = await this.redisService.setOtp(
         `otp-${phoneNumber}`,
         JSON.stringify(data),
       );
+
+
+      // const res = await this.redisService.get(`otp-${phoneNumber}`)
 
       console.log(test, 'test is here');
 
@@ -53,11 +54,11 @@ export class AuthService {
       console.log('ip issss>>>>' , req.headers['x-forwarded-for'])
       // await this.redisService.lockOtp(req.ip)
 
-      const smsService = new SmsService();
-      const smsResponse: any =  smsService.sendOtpMessage(
-        phoneNumber,
-        otp.toString(),
-      );
+      // const smsService = new SmsService();
+      // const smsResponse: any =  smsService.sendOtpMessage(
+      //   phoneNumber,
+      //   otp.toString(),
+      // );
 
       // if (!smsResponse.success) {
       //   return {
@@ -69,7 +70,7 @@ export class AuthService {
       return {
         message: 'ارسال کد تایید موفق',
         statusCode: 200,
-        data: null,
+        data: otp,
       };
     } catch (error) {
       console.log('error in sending otp:', error);
@@ -118,12 +119,12 @@ export class AuthService {
         };
       }
 
-      const user = await this.userServiceL.checkOrCreate(phoneNumber);
-      // const user = await this.userModel.create({
-      //   phoneNumber: phoneNumber,
-      //   authStatus: 1,
-      //   identityStatus: 2,
-      // });
+      // const user = await this.userServiceL.checkOrCreate(phoneNumber);
+      const user =  this.userRepo.create({
+        phoneNumber: phoneNumber,
+        authStatus: 1,
+        identityStatus: 2,
+      });
       console.log('userrrrr', user);
       if (!user) {
         return {
@@ -136,7 +137,7 @@ export class AuthService {
       
       const token = await this.tokenize.tokenize(
         {
-          _id: user?._id,
+          _id: user?.id,
           phoneNumber: user?.phoneNumber,
           role: 'user',
           firstName: user?.firstName,
@@ -148,7 +149,7 @@ export class AuthService {
       );
       const refreshToken = await this.tokenize.tokenize(
         {
-          _id: user?._id,
+          _id: user?.id,
           phoneNumber: user?.phoneNumber,
           role: 'user',
           firstName: user?.firstName,
@@ -163,7 +164,7 @@ export class AuthService {
       return {
         message: 'با موفقیت وارد شدید',
         statusCode: 200,
-        data: { refreshToken: refreshToken, token: token, ...user?.toObject() },
+        data: { refreshToken: refreshToken, token: token, ...user },
       };
     } catch (error) {
       console.log('error is sending otp', error);
@@ -211,7 +212,9 @@ export class AuthService {
 
   async sendSetPasswordOtp(userId: string) {
     try {
-      const user = await this.userModel.findById(userId);
+      const user = await this.userRepo.findOne({where:{
+        id:userId
+      }})
 
       if (!user) {
         return {
@@ -246,7 +249,9 @@ export class AuthService {
 
   async setpassword(userId: string, otp: number, password: string) {
     try {
-      const user = await this.userModel.findById(userId);
+      const user = await this.userRepo.findOne({where: {
+        id:userId
+      }});
 
       if (!user) {
         return {
@@ -289,7 +294,7 @@ export class AuthService {
 
       const hashedPassword = await this.hashPassword(password);
       user.password = hashedPassword;
-      await user.save();
+      await this.userRepo.save(user);
 
       return {
         message: 'رمز عبور با موفقیت تغییر پیدا کرد',
@@ -309,7 +314,9 @@ export class AuthService {
 
   async loginWithPassword(phoneNumber: string, password: string) {
     try {
-      const user = await this.userModel.findOne({ phoneNumber: phoneNumber });
+        const user = await this.userRepo.findOne({ where:{
+          phoneNumber:phoneNumber
+        }});
       if (!user) {
         return {
           message: 'کاربر پیدا نشد',
@@ -328,19 +335,19 @@ export class AuthService {
         };
       }
       const token = await this.tokenize.tokenize(
-        { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' },
+        { _id: user?.id, phoneNumber: user?.phoneNumber, role: 'user' },
         '1m',
         0,
       );
       const refreshToken = await this.tokenize.tokenize(
-        { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' },
+        { _id: user?.id, phoneNumber: user?.phoneNumber, role: 'user' },
         '1m',
         1,
       );
       return {
         message: 'ارسال کد تایید موفق',
         statusCode: 200,
-        data: { refreshToken: refreshToken, token: token, ...user?.toObject() },
+        data: { refreshToken: refreshToken, token: token, ...user },
       };
     } catch (error) {
       console.log('error', error);

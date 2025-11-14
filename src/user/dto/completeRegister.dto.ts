@@ -8,6 +8,7 @@ import { AddressDto } from "./addAdress.dto";
 
 export class compelteRegisterDto {
 
+
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
@@ -42,7 +43,7 @@ export class compelteRegisterDto {
 
 
   @ApiProperty({
-    type: [AddressDto],
+    
     example: [
       {
         adress: '123 Main St',
@@ -57,7 +58,7 @@ export class compelteRegisterDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AddressDto)
-  adresses: AddressDto[];
+  adresses: any[];
 
 }
 
