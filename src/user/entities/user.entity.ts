@@ -1,27 +1,23 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+import * as mongoose from 'mongoose';
 
+// export type UserDocument = User & Document;
 
-
-export interface IUser {
-  id: string;
-  firstName?: string;
-  lastName?: string;
+export interface UserDocument extends Document {
+  _id: string;
+  firstName: string;
+  lastName: string;
   phoneNumber: string;
-  email?: string;
-  // fatherName?: string;
-  password?: string;
-  pictureProfile?: string;
-  // nationalCode?: string;
-  birthDate?: string;
-
+  email: string;
+  password: string;
+  pictureProfile: string;
+  nationalCode: string;
+  birthDate: string;
+  authStatus: number; //? 0 just init - 1 compelteProfile - 2 exist in old service
+  isActive: boolean;
   adresses: {
-    id:string
+    _id: string;
     adress: string;
     postCode: string;
     name: string;
@@ -30,50 +26,55 @@ export interface IUser {
     city: string;
     province: string;
   }[];
-
-  authStatus: number;      // 1 init - 2 completeProfile - 3 old service
-  identityStatus: number;  // 0 false, 1 true, 2 pending
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  identityStatus: number;
 }
 
+@Schema({ timestamps: true })
+export class User2 {
+  @Prop({ type: mongoose.Schema.Types.ObjectId, auto: true })
+  _id: string;
 
-@Entity('users')
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   firstName: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   lastName: string;
 
-  @Column({ type: 'varchar', unique: true })
+  @Prop({ type: mongoose.Schema.Types.String, required: true , unique : true })
   phoneNumber: string;
 
-  @Column({ type: 'varchar', nullable: true, unique: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   email: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   fatherName: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   password: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   pictureProfile: string;
 
-  @Column({ type: 'varchar', nullable: true, unique: true })
+  @Prop({ type: mongoose.Schema.Types.String , unique : true})
   nationalCode: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Prop({ type: mongoose.Schema.Types.String })
   birthDate: string;
-
-  @Column({ type: 'jsonb', default: [] })
+  
+  @Prop({
+    type: [
+      {
+        adress: { type: String },
+        postCode: { type: String },
+        name: { type: String },
+        plate: { type: Number },
+        unit: { type: Number },
+        province: { type: String },
+        city: { type: String },
+      },
+    ],
+  })
   adresses: {
-    id:string
     adress: string;
     postCode: string;
     name: string;
@@ -83,18 +84,14 @@ export class User {
     province: string;
   }[];
 
-  @Column({ type: 'int', default: 1 }) 
-  authStatus: number; // 1 init - 2 completeProfile - 3 old service
+  @Prop({ type: mongoose.Schema.Types.Number })
+  authStatus: number; //? 1 just init - 2 compelteProfile - 3 exist in old service
 
-  @Column({ type: 'int', default: 0 }) 
-  identityStatus: number; // 0 false, 1 true, 2 pending
+  @Prop({ type: mongoose.Schema.Types.Number, default: 0 }) //? 0 false   1->true  2-->pending
+  identityStatus: number;
 
-  @Column({ type: 'bool', default: true })
+  @Prop({ default: true })
   isActive: boolean;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
+
+export const UserSchema2 = SchemaFactory.createForClass(User2);
