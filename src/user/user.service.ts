@@ -80,7 +80,7 @@ export class UserService {
           let newUser = await this.userModel.create(
             { phoneNumber: phoneNumber, authStatus: 1, identityStatus: 0 },
           );
-          
+            
           // Commit the transaction
           await session.commitTransaction();
           return newUser[0];
