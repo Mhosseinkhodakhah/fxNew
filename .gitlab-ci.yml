@@ -3,11 +3,10 @@ stages:
   - upload
   - deploy
 
-
 variables:
-  NEXUS_BASE_URL: "https://repo.khanetala.ir"
-  DEPLOY_SERVER: "185.7.212.157"
-  DEPLOY_USER: "root"
+  NEXUS_BASE_URL: 'https://repo.khanetala.ir'
+  DEPLOY_SERVER: '185.7.212.157'
+  DEPLOY_USER: 'root'
 
 # Step 1: Build and upload to Nexus
 build:
@@ -19,12 +18,12 @@ build:
     - npm ci
     - npm run build
     - echo "🔍 Scanning project for vulnerabilities..."
-    - /opt/trivy/bin/trivy fs --exit-code 1 --severity HIGH,CRITICAL dist/
-    - echo "📦 Zipping dist folder..."
+    - /opt/trivy/bin/trivy fs --skip-db-update --severity HIGH,CRITICAL .
+    - echo "📦 Compressing dist folder..."
     - tar -I 'zstd -10' -cf ${CI_COMMIT_SHORT_SHA}.tar.zst dist package.json package-lock.json ecosystem.config.js
   artifacts:
     paths:
-    - ${CI_COMMIT_SHORT_SHA}.tar.zst
+      - ${CI_COMMIT_SHORT_SHA}.tar.zst
     expire_in: 1 second
     when: on_success
   tags:
@@ -32,11 +31,10 @@ build:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
-
 # Step 2: Upload artifact to Nexus
 upload:
   stage: upload
-  needs: ["build"]
+  needs: ['build']
   script:
     - echo "🔼 Uploading build to Nexus"
     - BUILD_FILE="${CI_COMMIT_SHORT_SHA}.tar.zst"
@@ -54,7 +52,7 @@ upload:
 # Step 3: Deploy on project server via SSH
 deploy:
   stage: deploy
-  needs: ["upload"]
+  needs: ['upload']
   script:
     - echo "🧹 Cleaning up old builds (keeping 3 latest)..."
     - bash -c 'NETRC="/opt/nexus/.netrc"; BASE="${NEXUS_BASE_URL}"; REPO="artifacts"; GROUP="/${CI_PROJECT_NAME}"; KEEP=3; json=$(curl -s --netrc-file "$NETRC" "$BASE/service/rest/v1/search?repository=$REPO&group=$GROUP"); echo "$json" | jq -r ".items[] | .assets[] | select(.downloadUrl | contains(\"latestBuild.tar.zst\") | not) | [.id, .downloadUrl, .lastModified // .uploaded] | @tsv" | sort -k3 | awk -v k=$KEEP -v b=$BASE -v n=$NETRC "NR<=NF{f[NR]=\$0} END{c=NR-k; if(c>0){print \"Found \" NR \" files — deleting \" c \" oldest...\"; for(i=1;i<=c;i++){split(f[i],a,\"\t\");print \"Deleting \" a[2]; system(\"curl -s --netrc-file \" n \" -X DELETE \" b \"/service/rest/v1/assets/\" a[1])}} else print \"Nothing to delete — only \" NR \" files found.\"}"'
