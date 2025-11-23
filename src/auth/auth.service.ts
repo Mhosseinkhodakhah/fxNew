@@ -149,7 +149,7 @@ export class AuthService {
           lastName: user?.lastName,
           nationalCode : user?.nationalCode
         },
-        '5M',
+        '10H',
         0,
       );
       const refreshToken = await this.tokenize.tokenize(
