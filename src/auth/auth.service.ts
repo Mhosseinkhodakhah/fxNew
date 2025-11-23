@@ -81,6 +81,12 @@ export class AuthService {
     }
   }
 
+
+  /**
+   * this endpoint is for approving otp code and login users
+   * @param body 
+   * @returns 
+   */
   async validateOtp(body: validateOtpDto) {
     try {
 
@@ -143,7 +149,7 @@ export class AuthService {
           lastName: user?.lastName,
           nationalCode : user?.nationalCode
         },
-        '10h',
+        '5M',
         0,
       );
       const refreshToken = await this.tokenize.tokenize(
