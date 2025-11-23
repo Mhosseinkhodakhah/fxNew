@@ -203,7 +203,7 @@ export class AuthService {
       
       const token = await this.tokenize.tokenize(
         { _id: decoded?._id, phoneNumber: decoded?.phoneNumber, role: 'user' },
-        '2M',
+        '10H',
         0,
       );
 
