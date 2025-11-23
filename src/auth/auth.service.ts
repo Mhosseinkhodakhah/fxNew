@@ -183,9 +183,14 @@ export class AuthService {
 
   async refreshToken(refreshToken: refreshTokenDto) {
     try {
+
+      console.log('its come for refresh token')
       const decoded = await this.tokenize.checkRefreshToken(
         refreshToken.refreshToken,
       );
+
+      
+      
       if (!decoded) {
         return {
           message: ' توکن منقضی شده است',
@@ -194,12 +199,16 @@ export class AuthService {
         };
       }
 
+      console.log('its come for refresh token' , decoded)
+      
       const token = await this.tokenize.tokenize(
         { _id: decoded?._id, phoneNumber: decoded?.phoneNumber, role: 'user' },
-        '10h',
+        '2M',
         0,
       );
 
+      console.log('its come for refresh token' , token)
+      
       return {
         message: 'ارسال کد تایید موفق',
         statusCode: 200,
