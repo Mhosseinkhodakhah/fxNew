@@ -207,7 +207,7 @@ export class AuthService {
         0,
       );
 
-      let refreshToken = await this.tokenize.tokenize(
+      let refreshToken2 = await this.tokenize.tokenize(
         { _id: decoded?._id, phoneNumber: decoded?.phoneNumber, role: 'user' },
         '3H',1
       )
@@ -217,7 +217,7 @@ export class AuthService {
       return {
         message: 'ارسال کد تایید موفق',
         statusCode: 200,
-        data: { token , refreshToken },
+        data: { token , refreshToken :refreshToken2 }
       };
     } catch (error) {
       console.log('error is sending otp', error);
