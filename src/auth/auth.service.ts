@@ -207,12 +207,17 @@ export class AuthService {
         0,
       );
 
+      let refreshToken = await this.tokenize.tokenize(
+        { _id: decoded?._id, phoneNumber: decoded?.phoneNumber, role: 'user' },
+        '3H',1
+      )
+
       console.log('its come for refresh token' , token)
       
       return {
         message: 'ارسال کد تایید موفق',
         statusCode: 200,
-        data: { token },
+        data: { token , refreshToken },
       };
     } catch (error) {
       console.log('error is sending otp', error);
