@@ -3,62 +3,15 @@ stages:
   - upload
   - deploy
 
-variables:
-  NEXUS_BASE_URL: 'https://repo.khanetala.ir'
-  DEPLOY_SERVER: '185.7.212.157'
-  DEPLOY_USER: 'root'
+include:
+  - project: "devops/ci-templates"
+    file: "backend-nestjs.yml"
 
-# Step 1: Build 
 build:
-  stage: build
-  script:
-    - echo "📦 Building project..."
-    - export HTTP_PROXY="http://turntable.proxy.rlwy.net:58058"
-    - export HTTPS_PROXY="http://turntable.proxy.rlwy.net:58058"
-    - npm ci
-    - npm run build
-    - echo "🔍 Scanning project for vulnerabilities..."
-    - /opt/trivy/bin/trivy fs --skip-db-update --severity HIGH,CRITICAL .
-    - echo "📦 Compressing dist folder..."
-    - tar -I 'zstd -10' -cf ${CI_COMMIT_SHORT_SHA}.tar.zst dist package.json package-lock.json ecosystem.config.js
-  artifacts:
-    paths:
-      - ${CI_COMMIT_SHORT_SHA}.tar.zst
-    expire_in: 1 second
-    when: on_success
-  tags:
-    - shell
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+  extends: .build_template
 
-# Step 2: Upload artifact to Nexus
 upload:
-  stage: upload
-  needs: ['build']
-  script:
-    - echo "🔼 Uploading build to Nexus"
-    - BUILD_FILE="${CI_COMMIT_SHORT_SHA}.tar.zst"
-    - REPO_NAME="artifacts"
-    - GROUP="/${CI_PROJECT_NAME}"
-    - echo "📡 Uploading new build ${BUILD_FILE}"
-    - curl --netrc-file /opt/nexus/.netrc --upload-file ${BUILD_FILE} "${NEXUS_BASE_URL}/repository/${REPO_NAME}/${CI_PROJECT_NAME}/${BUILD_FILE}"
-    - echo "🔄 Uploading latestBuild.tar.zst"
-    - curl --netrc-file /opt/nexus/.netrc --upload-file ${BUILD_FILE} "${NEXUS_BASE_URL}/repository/${REPO_NAME}/${CI_PROJECT_NAME}/latestBuild.tar.zst"
-  tags:
-    - shell
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+  extends: .upload_template
 
-# Step 3: Deploy on project server via SSH
 deploy:
-  stage: deploy
-  needs: ['upload']
-  script:
-    - echo "🧹 Cleaning up old builds (keeping 3 latest)..."
-    - bash -c 'NETRC="/opt/nexus/.netrc"; BASE="${NEXUS_BASE_URL}"; REPO="artifacts"; GROUP="/${CI_PROJECT_NAME}"; KEEP=3; json=$(curl -s --netrc-file "$NETRC" "$BASE/service/rest/v1/search?repository=$REPO&group=$GROUP"); echo "$json" | jq -r ".items[] | .assets[] | select(.downloadUrl | contains(\"latestBuild.tar.zst\") | not) | [.id, .downloadUrl, .lastModified // .uploaded] | @tsv" | sort -k3 | awk -v k=$KEEP -v b=$BASE -v n=$NETRC "NR<=NF{f[NR]=\$0} END{c=NR-k; if(c>0){print \"Found \" NR \" files — deleting \" c \" oldest...\"; for(i=1;i<=c;i++){split(f[i],a,\"\t\");print \"Deleting \" a[2]; system(\"curl -s --netrc-file \" n \" -X DELETE \" b \"/service/rest/v1/assets/\" a[1])}} else print \"Nothing to delete — only \" NR \" files found.\"}"'
-    - echo "🚀 Deploying to project server..."
-    - ssh -i ~/.ssh/id_ed25519 $DEPLOY_USER@$DEPLOY_SERVER "cd /opt/bashScripts && ./gitlabRelease.sh ${CI_PROJECT_NAME}"
-  tags:
-    - shell
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+  extends: .deploy_template
