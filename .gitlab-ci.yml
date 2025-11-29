@@ -4,8 +4,8 @@ stages:
   - deploy
 
 include:
-  - project: "devops/ci-templates"
-    file: "backend-nestjs.yml"
+  - project: 'devops/ci-templates'
+    file: 'backend-nestjs.yml'
 
 build:
   extends: .build_template
