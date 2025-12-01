@@ -138,7 +138,6 @@ export class AuthService {
           error: 'لطفا دوباره امتحان کنید',
         };
       }
-
       
       const token = await this.tokenize.tokenize(
         {

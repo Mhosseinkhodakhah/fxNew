@@ -114,7 +114,7 @@ export class UserController {
       { ttl: 5000 }
     );
   }
-
+  
   @Post('/identity')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -64,6 +64,9 @@ export class UserService {
             identityStatus: 1,
           });
 
+
+          console.log('its hereeee created old userrrrrrrrrrrrr' , oldNewUser)
+
           const wallet = {
             owner: oldNewUser[0]._id,
             balance: 0,
