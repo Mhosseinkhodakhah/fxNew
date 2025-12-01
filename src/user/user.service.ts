@@ -68,7 +68,7 @@ export class UserService {
           console.log('its hereeee created old userrrrrrrrrrrrr' , oldNewUser)
 
           const wallet = {
-            owner: oldNewUser[0]._id,
+            owner: oldNewUser._id,
             balance: 0,
             goldWeight: oldUser.data.goldWeight,
           };
@@ -78,15 +78,15 @@ export class UserService {
           
           // Commit the transaction
           await session.commitTransaction();
-          return oldNewUser[0];
+          return oldNewUser;
         } else if (oldUser.statusCode == 0) {
           let newUser = await this.userModel.create(
             { phoneNumber: phoneNumber, authStatus: 1, identityStatus: 0 },
           );
-            
+          console.log('new user isssssssssss' , newUser)
           // Commit the transaction
           await session.commitTransaction();
-          return newUser[0];
+          return newUser;
         }
       }
       
