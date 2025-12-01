@@ -124,7 +124,7 @@ export class AuthService {
         };
       }
 
-      const user = await this.userServiceL.checkOrCreate(phoneNumber);
+      const user : any = await this.userServiceL.checkOrCreate(phoneNumber);
       // const user = await this.userModel.create({
       //   phoneNumber: phoneNumber,
       //   authStatus: 1,
