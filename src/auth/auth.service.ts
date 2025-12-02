@@ -284,9 +284,9 @@ export class AuthService {
       const date = new Date().getTime();
       if (!findedOtp) {
         return {
-          message: 'شماره تلفن پیدا نشد',
+          message: 'زمان کد مورد نظر به اتمام رسیده است',
           statusCode: 400,
-          error: 'شماره تلفن پیدا نشد',
+          error: 'زمان کد مورد نظر به اتمام رسیده است',
         };
       }
       console.log('date', date - findedOtp.date);

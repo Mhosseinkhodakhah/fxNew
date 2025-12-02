@@ -121,7 +121,7 @@ export class AuthController {
   ) {
     return this.authService.validateOtp(body);
   }
-
+  
   @Post('/refresh')
   @ApiOperation({ summary: 'get token ' })
   @ApiResponse({

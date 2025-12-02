@@ -68,7 +68,7 @@ export class RedisServiceService {
 
     async setOtp(key: string, value: any): Promise<any> {
         
-        await this.redisClient.setex(key, 120, JSON.stringify(value));
+        await this.redisClient.setex(key, 160, JSON.stringify(value));
     }
 
     
