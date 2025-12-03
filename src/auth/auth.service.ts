@@ -146,7 +146,8 @@ export class AuthService {
           role: 'user',
           firstName: user?.firstName,
           lastName: user?.lastName,
-          nationalCode : user?.nationalCode
+          nationalCode : user?.nationalCode,
+          status : user?.identityStatus
         },
         '10H',
         0,

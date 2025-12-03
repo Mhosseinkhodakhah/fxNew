@@ -360,8 +360,8 @@ export class UserService {
   async upgradeProfile(userId: string, data: upgradeProfileDto) {
     const session = await this.connection.startSession();
     session.startTransaction();
-
-    try {
+    
+    try { 
       console.log(userId);
 
       const user = await this.userModel.findByIdAndUpdate(userId, {
