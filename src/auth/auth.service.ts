@@ -347,7 +347,7 @@ export class AuthService {
         };
       }
       const token = await this.tokenize.tokenize(
-        { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' },
+        { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' , status : user.identityStatus  },
         '1m',
         0,
       );
