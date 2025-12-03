@@ -1,15 +1,17 @@
 import { IsNotEmpty, IsString } from "@nestjs/class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { IsOptional } from "class-validator";
 
 export class upgradeProfileDto{
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @ApiProperty({
         example : '09902223344',
         required : true
     })
-    phoneNumber : string
+    phoneNumber ?: string
+    
     @IsString()
     @IsNotEmpty()
     @ApiProperty({
