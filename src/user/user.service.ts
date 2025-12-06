@@ -368,26 +368,26 @@ export class UserService {
       }
     }
 
-    let userAddress;
-    if (userData.adresses.length>0){
-      for (let i of userData.adresses){
-        if (i._id.toString() == address.toString()){
-          userAddress = i
-        }
-      }
-    }else{
-      return {
-        msg : 'notFound',
-        statusCode : 400,
-        code : 'GAOO1'
-      }
-    }
+    // let userAddress;
+    // if (userData.adresses.length>0){
+    //   for (let i of userData.adresses){
+    //     if (i._id.toString() == address.toString()){
+    //       userAddress = i
+    //     }
+    //   }
+    // }else{
+    //   return {
+    //     msg : 'notFound',
+    //     statusCode : 400,
+    //     code : 'GAOO1'
+    //   }
+    // }
 
     return {
       msg : 'found',
       statusCode : 200,
       code : 'GAOO2',
-      data : userAddress
+      data : userData
     }
 
 
