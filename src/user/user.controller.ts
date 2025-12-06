@@ -1004,6 +1004,13 @@ export class UserController {
     return this.userService.getUsersProvinces();
   }
 
+  @Get('/useraddress')
+  // @UseGuards(JwtAdminAuthGuard)
+  // @ApiBearerAuth()
+  async getUserAddress(@Param('user') user : string , @Param('address') address : string) {
+    return this.userService.getAddressOfOrder(user , address);
+  }
+
   @Get('/internal/nationalCode')
   // @UseGuards(JwtAdminAuthGuard)
   // @ApiBearerAuth()

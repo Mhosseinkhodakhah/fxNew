@@ -206,7 +206,7 @@ export class UserService {
 
       let userAfterUpdate = await this.userModel.findById(userId).session(session);
       console.log('adsf', userAfterUpdate);
-
+      
       // Commit the transaction
       await session.commitTransaction();
 
@@ -357,10 +357,47 @@ export class UserService {
     }
   }
 
+
+  async getAddressOfOrder(user : string , address : string){
+    let userData = await this.userModel.findById(user)
+    if (!userData){
+      return {
+        msg : 'notFound',
+        statusCode : 400,
+        code : 'GAOO0'
+      }
+    }
+
+    let userAddress;
+    if (userData.adresses.length>0){
+      for (let i of userData.adresses){
+        if (i._id.toString() == address.toString()){
+          userAddress = i
+        }
+      }
+    }else{
+      return {
+        msg : 'notFound',
+        statusCode : 400,
+        code : 'GAOO1'
+      }
+    }
+
+    return {
+      msg : 'found',
+      statusCode : 200,
+      code : 'GAOO2',
+      data : userAddress
+    }
+
+
+  }
+
+
   async upgradeProfile(userId: string, data: upgradeProfileDto) {
     const session = await this.connection.startSession();
     session.startTransaction();
-    
+
     try { 
       console.log(userId);
 
