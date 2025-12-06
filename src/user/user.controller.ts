@@ -1007,7 +1007,7 @@ export class UserController {
   @Get('/useraddress')
   // @UseGuards(JwtAdminAuthGuard)
   // @ApiBearerAuth()
-  async getUserAddress(@Param('user') user : string , @Param('address') address : string) {
+  async getUserAddress(@Query('user') user : string , @Query('address') address : string) {
     return this.userService.getAddressOfOrder(user , address);
   }
 
