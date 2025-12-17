@@ -54,19 +54,27 @@ async function bootstrap() {
     }),
   );
   const options = new DocumentBuilder()
-    .setTitle('Khanetala shop APIs')
+    .setTitle('Khanetala E-commerce User Service APIs')
     .setDescription('this is api documentation of Ecommerce project')
     .setVersion('1.0')
     .addServer('http://localhost:9010/', 'Local environment')
-    .addServer("https://shop.khaneetala.ir,'Stage")
-    .addTag('USER SERVICE')
+    .addServer("https://shop.khanetalaa.ir/v1/main", 'Stage')
+    .addTag('User Service')
     .addBearerAuth()
     .build();
   process.nextTick(() => {
     console.log('next tick done');
   });
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('swagger', app, document);
+
+  app.getHttpAdapter().get('/api-docs-json', (req, res) => {
+    if (req.headers['referer'] != process.env.SWAGGERUI_SERVER_URL) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.send(document);
+  });
 
   const loggingInterceptor = app.get(LoggingInterceptor);
   app.useGlobalInterceptors(new ResponseInterceptor(), loggingInterceptor);
