@@ -343,7 +343,7 @@ export class UserController {
 
 
   @Get('/admin/info/:userId')
-  @UseGuards(JwtAdminAuthGuard)
+  // @UseGuards(JwtAdminAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'get user info by admin' })
   @ApiResponse({
