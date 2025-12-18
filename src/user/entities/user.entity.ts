@@ -57,10 +57,10 @@ export class User2 {
 
   @Prop({ type: mongoose.Schema.Types.String , unique : true})
   nationalCode: string;
-
+  
   @Prop({ type: mongoose.Schema.Types.String })
   birthDate: string;
-  
+
   @Prop({
     type: [
       {

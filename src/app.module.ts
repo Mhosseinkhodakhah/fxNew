@@ -27,7 +27,7 @@ import { IdentityService } from './identity/identity.service';
     WinstonModule.forRootAsync(winstonAsyncConfig),
     MongooseModule.forRoot(process.env.MONGO_URI!),
     MongooseModule.forFeature([{ name: 'userM', schema: UserSchema2 }]),
-    KafkaModule,
+    // KafkaModule,
     UserModule,
     AuthModule,
   ],
