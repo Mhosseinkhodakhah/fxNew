@@ -316,6 +316,65 @@ export class UserController {
   }
 
 
+  @Get('/admin/info')
+  @UseGuards(JwtAdminAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'get user info by admin and id' })
+  @ApiResponse({
+    status: 200,
+    description: 'the user complete info successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'the user complete info successfully',
+        error: null,
+        data: {},
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden.',
+    schema: {
+      example: {
+        success: false,
+        message: 'the ngo creation failed',
+        error: 'forbidden user',
+        data: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'duplicate data',
+    schema: {
+      example: {
+        success: false,
+        message: 'this project already cpmpleted',
+        error: 'duplicate project',
+        data: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'internal service error',
+    schema: {
+      example: {
+        success: false,
+        message: 'internal error',
+        error: 'internal service error',
+        data: null,
+      },
+    },
+  })
+  getUserByAdminById(@Req() req: any, @Res() res: any , @Param('id') id : string) {
+    // console.log('reqUser', req.user);
+    const userId = id;
+    return this.userService.findById(userId);
+  }
+
+
   @Post('/admin/identity/check/:phoneNumber')
   @UseGuards(JwtAdminAuthGuard)
   @ApiBearerAuth()
@@ -556,7 +615,6 @@ export class UserController {
       { ttl: 5000 }
     );
   }
-
 
 
   @Post('/address/update')
@@ -971,7 +1029,6 @@ export class UserController {
   ){
     return this.userService.getByNationalCodeInternal(body)
   }
-
 
   @Post("/internal/user/nationalCode")
   async getByNationalCodeInternalForCreateOrder(
