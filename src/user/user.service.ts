@@ -1175,7 +1175,10 @@ export class UserService {
 
   async getUserByNatinalCode(nationalCode: string) {
     try {
-      const thisUser = await this.userModel.findOne({ nationalCode });
+      const thisUser = await this.userModel.findOne({$or : [
+        {nationalCode},
+        {_id : nationalCode}
+      ]});
 
       console.log(thisUser, 'thisUser');
 
@@ -1199,6 +1202,9 @@ export class UserService {
       };
     }
   }
+
+
+  
   create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';
   }
