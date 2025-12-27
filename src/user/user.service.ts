@@ -1175,10 +1175,10 @@ export class UserService {
 
   async getUserByNatinalCode(nationalCode: string) {
     try {
-      const thisUser = await this.userModel.findOne({$or : [
+      const thisUser = await this.userModel.findOne(
         {nationalCode},
-        {_id : nationalCode}
-      ]});
+        // {_id : /nationalCode}
+      );
 
       console.log(thisUser, 'thisUser');
 
@@ -1195,7 +1195,7 @@ export class UserService {
         data: thisUser,
       };
     } catch (error) {
-      console.log('error in fuckccccc')
+      console.log('error in fuckccccc',  error)
       return {
         message: 'internal server error',
         statusCode: 500,

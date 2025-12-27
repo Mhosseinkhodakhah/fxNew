@@ -797,8 +797,7 @@ export class UserController {
       { ttl: 5000 }
     );
   }
-
-
+  
   @Get('/admin/address/remove/:id/:nationalCode')
   @UseGuards(JwtAdminAuthGuard)
   @ApiBearerAuth()
