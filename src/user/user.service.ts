@@ -1176,8 +1176,12 @@ export class UserService {
   async getUserByNatinalCode(nationalCode: string) {
     try {
       const thisUser = await this.userModel.findOne(
-        {nationalCode},
-        // {_id : /nationalCode}
+        {
+          $or : [
+            {nationalCode},
+        {_id : nationalCode}
+          ]
+        }
       );
 
       console.log(thisUser, 'thisUser');
