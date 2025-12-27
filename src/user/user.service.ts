@@ -1195,6 +1195,7 @@ export class UserService {
         data: thisUser,
       };
     } catch (error) {
+      console.log('error in fuckccccc')
       return {
         message: 'internal server error',
         statusCode: 500,
