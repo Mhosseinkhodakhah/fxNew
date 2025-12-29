@@ -1070,6 +1070,7 @@ export class UserController {
     return this.userService.getAddressOfOrder(user , address);
   }
 
+  @UseGuards(InternalTokenGuard)
   @Get('/internal/nationalCode')
   // @UseGuards(JwtAdminAuthGuard)
   // @ApiBearerAuth()
