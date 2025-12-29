@@ -31,6 +31,7 @@ import { IdentityDto } from './dto/Identity.dto';
 import { JwtAdminAuthGuard } from 'src/jwt/admin-jwt-auth.guard';
 import { userFilterDto } from './dto/userFilter.dto';
 import { LockerService } from 'src/locker/locker.service';
+import { InternalTokenGuard } from 'src/guard/internal.guard';
 
 @Controller('user')
 export class UserController {
@@ -1029,6 +1030,7 @@ export class UserController {
     return this.userService.getByNationalCodeInternal(body)
   }
 
+  @UseGuards(InternalTokenGuard)
   @Post("/internal/user/nationalCode")
   async getByNationalCodeInternalForCreateOrder(
     @Body() body : any
@@ -1037,6 +1039,7 @@ export class UserController {
   }
 
 
+  @UseGuards(InternalTokenGuard)
   @Get('/admin/users')
   // @UseGuards(JwtAdminAuthGuard)
   @ApiBearerAuth()

@@ -3,6 +3,19 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 @Injectable()
 export class InterserviceService {
 
+ private getHeader() : Record<string, string> {
+
+      const token = process.env.INTERSERVICE_TOKEN;
+      
+        if (!token) {
+          throw new Error('inter service token is not defined');
+        }
+
+        return {
+          'Content-Type': 'application/json',
+          'x-internal-token': token,
+        };
+ }
 
   
   async createWallet(wallet: any) {
@@ -11,10 +24,7 @@ export class InterserviceService {
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        //   'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: this.getHeader(),
       body: JSON.stringify(body),
     });
     
