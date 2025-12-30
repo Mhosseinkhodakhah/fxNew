@@ -40,8 +40,7 @@ export class InterserviceService {
   async checkExistOldUser(phoneNumber: string) {
     const url = 'https://gateway.khanetala.ir/v1/query/internal/checkUser';
     const body = {
-      userName: process.env.INTERSERVICE_USERNAME,
-      password: process.env.INTERSERVICE_PASSWORD
+      phoneNumber,
     };
     const token = await this.getToken();
 
