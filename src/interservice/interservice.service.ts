@@ -102,8 +102,8 @@ export class InterserviceService {
   private async getToken() {
     const url = 'https://gateway.khanetala.ir/v1/query/internal/getToken';
     const body = {
-      userName:"E-commerce" ,
-      password: "dgtYT0G1tBCe9Ag00Ff9"
+      userName: process.env.INTERSERVICE_USERNAME,
+      password: process.env.INTERSERVICE_PASSWORD
     };
 
     const response = await fetch(url, {
