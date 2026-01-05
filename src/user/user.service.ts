@@ -1179,8 +1179,9 @@ export class UserService {
     console.log(typeof nationalCode, "type of national code");
     
     let query;
-    
+
     if (mongoose.Types.ObjectId.isValid(nationalCode)) {
+      console.log('come into this')
       query = {
         $or: [
           { nationalCode },
@@ -1188,7 +1189,7 @@ export class UserService {
         ]
       };
     } else {
-    
+      console.log('come into this22')
       query = { nationalCode };
     }
     
