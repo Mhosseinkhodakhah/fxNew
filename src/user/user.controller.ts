@@ -1039,9 +1039,9 @@ export class UserController {
   }
 
 
-  @UseGuards(InternalTokenGuard)
+  // @UseGuards(InternalTokenGuard)
+  @UseGuards(JwtAdminAuthGuard)
   @Get('/admin/users')
-  // @UseGuards(JwtAdminAuthGuard)
   @ApiBearerAuth()
   async getAllUsers(@Query() query: userFilterDto) {
     return this.userService.getAllUser(query);
