@@ -1075,6 +1075,6 @@ export class UserController {
   // @UseGuards(JwtAdminAuthGuard)
   // @ApiBearerAuth()
   async getUserByNationalCode(@Query('nationalCode') query: string) {
-    return this.userService.getUserByNatinalCode(query);
+    return this.userService.getUserByNationalCode(query);
   }
 }
