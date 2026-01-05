@@ -1184,8 +1184,8 @@ export class UserService {
       console.log('come into this')
       query = {
         $or: [
-          { nationalCode },
-          { _id: new mongoose.Types.ObjectId(nationalCode) }
+          // { nationalCode },
+          { _id: nationalCode }
         ]
       };
     } else {
