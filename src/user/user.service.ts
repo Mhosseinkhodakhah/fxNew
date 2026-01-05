@@ -1173,45 +1173,51 @@ export class UserService {
     }
   }
 
-  async getUserByNatinalCode(nationalCode: string) {
-    try {
-
-      console.log(nationalCode, "nationaaaaaaaal code is here ");
-      console.log(typeof nationalCode, "nationaaaaaaaal code is here ");
-      
-      
-      const thisUser = await this.userModel.findOne(
-        {
-          $or : [
-            {nationalCode},
-            // {_id : new mongoose.Types.ObjectId(nationalCode)}
-          ]
-        }
-      );
-
-      console.log(thisUser, 'thisUser');
-
-      if (!thisUser) {
-        return {
-          message: 'user not found',
-          statusCode: 400,
-          data: null,
-        };
-      }
-      return {
-        message: 'successfully done',
-        statusCode: 200,
-        data: thisUser,
+ async getUserByNationalCode(nationalCode: string) {
+  try {
+    console.log(nationalCode, "national code is here");
+    console.log(typeof nationalCode, "type of national code");
+    
+    let query;
+    
+    if (mongoose.Types.ObjectId.isValid(nationalCode)) {
+      query = {
+        $or: [
+          { nationalCode },
+          { _id: new mongoose.Types.ObjectId(nationalCode) }
+        ]
       };
-    } catch (error) {
-      console.log('error in fuckccccc',  error)
+    } else {
+    
+      query = { nationalCode };
+    }
+    
+    const thisUser = await this.userModel.findOne(query);
+    
+    console.log(thisUser, 'thisUser');
+
+    if (!thisUser) {
       return {
-        message: 'internal server error',
-        statusCode: 500,
+        message: 'user not found',
+        statusCode: 400,
         data: null,
       };
     }
+    
+    return {
+      message: 'successfully done',
+      statusCode: 200,
+      data: thisUser,
+    };
+  } catch (error) {
+    console.log('Error in getUserByNationalCode:', error);
+    return {
+      message: 'internal server error',
+      statusCode: 500,
+      data: null,
+    };
   }
+}
 
 
   
