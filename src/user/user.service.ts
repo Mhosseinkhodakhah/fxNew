@@ -1184,7 +1184,7 @@ export class UserService {
         {
           $or : [
             {nationalCode},
-            {_id : new mongoose.Types.ObjectId(nationalCode)}
+            // {_id : new mongoose.Types.ObjectId(nationalCode)}
           ]
         }
       );
