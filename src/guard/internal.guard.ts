@@ -11,6 +11,8 @@ export class InternalTokenGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = request.headers['x-internal-token'];
 
+    console.log(token, "///// token is here")
+
     if (token !== process.env.INTERSERVICE_TOKEN) {
       throw new UnauthorizedException('Invalid internal token');
     }
