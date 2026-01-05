@@ -1177,6 +1177,7 @@ export class UserService {
     try {
 
       console.log(nationalCode, "nationaaaaaaaal code is here ");
+      console.log(typeof nationalCode, "nationaaaaaaaal code is here ");
       
       
       const thisUser = await this.userModel.findOne(
