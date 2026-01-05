@@ -1179,19 +1179,18 @@ export class UserService {
     console.log(typeof nationalCode, "type of national code");
     
     let query;
+    let thisUser;
 
     if (mongoose.Types.ObjectId.isValid(nationalCode)) {
       console.log('come into this')
-      query = { _id: nationalCode }
+      thisUser = await this.userModel.findById(nationalCode)
     } else {
       console.log('come into this22')
-      query = { nationalCode };
+      thisUser = await this.userModel.findOne({
+        nationalCode : nationalCode
+      })
     }
-    
-    const thisUser = await this.userModel.findOne(query);
-    
-    console.log(thisUser, 'thisUser');
-
+        
     if (!thisUser) {
       return {
         message: 'user not found',
