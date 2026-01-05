@@ -885,7 +885,7 @@ export class UserService {
 
 
 
-  async getByNationalCodeInternalForCreateOrder(body: any) {
+  async   getByNationalCodeInternalForCreateOrder(body: any) {
 
     if (!body.nationalCode) {
       return {
@@ -1175,11 +1175,13 @@ export class UserService {
 
   async getUserByNatinalCode(nationalCode: string) {
     try {
+
+      
       const thisUser = await this.userModel.findOne(
         {
           $or : [
             {nationalCode},
-        {_id : nationalCode}
+            {_id : new mongoose.Types.ObjectId(nationalCode)}
           ]
         }
       );
