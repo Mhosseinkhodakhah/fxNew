@@ -1176,6 +1176,8 @@ export class UserService {
   async getUserByNatinalCode(nationalCode: string) {
     try {
 
+      console.log(nationalCode, "nationaaaaaaaal code is here ");
+      
       
       const thisUser = await this.userModel.findOne(
         {
