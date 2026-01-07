@@ -118,7 +118,7 @@ export class UserService {
     session.startTransaction();
 
     try {
-      console.log(userId);
+      console.log(userId , data);
 
       const user = await this.userModel.findByIdAndUpdate(userId, {
         firstName: data.firstName,
