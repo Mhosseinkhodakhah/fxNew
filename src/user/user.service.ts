@@ -191,6 +191,9 @@ export class UserService {
       const user = await this.userModel.findByIdAndUpdate(userId, {
         birthDate: data.birthDate,
         nationalCode: data.nationalCode,
+        firstName : data.firstName,
+        lastName : data.lastName,
+        fatherName : data.fatherName,
         authStatus: 2,
         identityStatus: 2,
       }, { session });

@@ -32,7 +32,6 @@ export class compelteRegisterDto {
   })
   fatherName: string
 
-
   @IsString()
   @ApiProperty({
     example: 'ali@moahamadi@gmail.com',
