@@ -27,6 +27,30 @@ export class upgradeProfileDto{
     })
     birthDate : string
 
+    @IsString()
+    @IsNotEmpty()
+    @ApiProperty({
+        example : 'علیرضا',
+        required : true
+    })
+    firstName : string
+
+    @IsString()
+    @IsNotEmpty()
+    @ApiProperty({
+        example : 'زارع',
+        required : true
+    })
+    lastName:string
+
+    
+    @IsString()
+    @IsNotEmpty()
+    @ApiProperty({
+        example : 'روح الله',
+        required : true
+    })
+    fatherName : string
 }
 
 

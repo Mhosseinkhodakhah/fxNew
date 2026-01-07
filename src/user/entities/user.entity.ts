@@ -27,7 +27,12 @@ export interface UserDocument extends Document {
     province: string;
   }[];
   identityStatus: number;
+
+  isRealyVerified: boolean;
+
 }
+
+
 
 @Schema({ timestamps: true })
 export class User2 {
@@ -92,6 +97,10 @@ export class User2 {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({ default: true })
+  isRealyVerified: boolean;
+
 }
 
 export const UserSchema2 = SchemaFactory.createForClass(User2);
