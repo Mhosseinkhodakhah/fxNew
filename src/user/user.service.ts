@@ -18,6 +18,7 @@ import { log } from 'util';
 import { IdentityService } from 'src/identity/identity.service';
 import winston, { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER, WinstonLogger } from 'nest-winston';
+import { threadId } from 'worker_threads';
 // import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
@@ -75,6 +76,13 @@ export class UserService {
 
           // Create wallet through internal service
           await this.internalService.createWallet(wallet);
+
+          // use kafka instead http 
+
+          await this.kafkaService.sendMessage('create-wallet',{
+            wallet
+          })
+
 
           // Commit the transaction
           await session.commitTransaction();
@@ -1266,6 +1274,44 @@ export class UserService {
         message: 'done',
         statusCode: 200,
         data: updatedUser,
+      };
+    } catch (error) {
+      console.log('error', error);
+      return {
+        message: 'مشکلی از سمت سرور به وجود آمده',
+        statusCode: 500,
+        error: 'خطای داخلی سیستم',
+      };
+    }
+  }
+
+
+
+  
+
+
+
+
+    async createSpeceficUserForTestKafka(name: string) {
+    try {
+
+
+      const newUser = await this.userModel.create({
+        lastName:"test-kafka",
+        firstName:name,
+        phoneNumber:"09111111111",
+        nationalCode: "5566669182"
+
+      })
+
+
+      console.log(newUser, "///// new user is here ");
+      
+
+      return {
+        message: 'done',
+        statusCode: 200,
+        data: newUser,
       };
     } catch (error) {
       console.log('error', error);

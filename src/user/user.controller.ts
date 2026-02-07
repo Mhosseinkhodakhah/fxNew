@@ -1077,4 +1077,5 @@ export class UserController {
   async getUserByNationalCode(@Query('nationalCode') query: string) {
     return this.userService.getUserByNationalCode(query);
   }
+
 }
