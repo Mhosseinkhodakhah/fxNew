@@ -13,6 +13,7 @@ import { LockerService } from 'src/locker/locker.service';
 import { RedisServiceService } from 'src/redis-service/redis-service.service';
 import { ConfigService } from '@nestjs/config';
 import { IdentityService } from 'src/identity/identity.service';
+import { KafkaProducerService } from 'src/kafka/kafka.producer';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { IdentityService } from 'src/identity/identity.service';
   ],
   controllers: [UserController],
   providers: [
+    KafkaProducerService,
     UserService,
     InterserviceService,
     JwtService,

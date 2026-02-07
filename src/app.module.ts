@@ -19,6 +19,7 @@ import { LoggerService } from './logger/logger.service';
 import { KafkaModule } from './kafka/kafka.module';
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { IdentityService } from './identity/identity.service';
+import { KafkaProducerService } from './kafka/kafka.producer';
 
 
 @Module({
@@ -33,6 +34,7 @@ import { IdentityService } from './identity/identity.service';
   ],
   controllers: [AppController],
   providers: [
+    KafkaProducerService,
     AppService,
     RabbitMqService,
     RedisServiceService,
