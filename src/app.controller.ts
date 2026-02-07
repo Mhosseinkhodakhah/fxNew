@@ -36,6 +36,10 @@ export class AppController {
     @Payload() message: any,
     @Ctx() context: KafkaContext,
   ) {
+
+
+    console.log(message , "message is here ")
+
     const { name } = message.value;
 
     console.log(name, " im here in hande create user in userr controller ");
@@ -43,9 +47,9 @@ export class AppController {
 
     await this.userservice.createSpeceficUserForTestKafka(name);
 
-    await this.kafkaService.sendMessage('test-kafka', {
-      name
-    });
+    // await this.kafkaService.sendMessage('test-kafka', {
+    //   name
+    // });
 
     const offset = context.getMessage().offset;
     const partition = context.getPartition();
@@ -54,7 +58,4 @@ export class AppController {
       `Received test-kafka partition ${partition}, offset ${offset}`,
     );
   }
-
-
-
 }
