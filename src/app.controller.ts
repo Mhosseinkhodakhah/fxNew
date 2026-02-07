@@ -31,7 +31,7 @@ export class AppController {
    * @param context
    * @returns
    */
-  @EventPattern('update-order')
+  @EventPattern('test-kafka')
   async handleUserFoekafka(
     @Payload() message: any,
     @Ctx() context: KafkaContext,
@@ -43,7 +43,7 @@ export class AppController {
 
     await this.userservice.createSpeceficUserForTestKafka(name);
 
-    await this.kafkaService.sendMessage('order-updated', {
+    await this.kafkaService.sendMessage('test-kafka', {
       name
     });
 
@@ -51,7 +51,7 @@ export class AppController {
     const partition = context.getPartition();
 
     console.log(
-      `Received update-order partition ${partition}, offset ${offset}`,
+      `Received test-kafka partition ${partition}, offset ${offset}`,
     );
   }
 
