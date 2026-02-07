@@ -20,6 +20,7 @@ import { KafkaModule } from './kafka/kafka.module';
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { IdentityService } from './identity/identity.service';
 import { KafkaProducerService } from './kafka/kafka.producer';
+import { UserService } from './user/user.service';
 
 
 @Module({
@@ -34,6 +35,7 @@ import { KafkaProducerService } from './kafka/kafka.producer';
   ],
   controllers: [AppController],
   providers: [
+    UserService,
     KafkaProducerService,
     AppService,
     RabbitMqService,

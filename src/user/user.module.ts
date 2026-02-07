@@ -22,6 +22,7 @@ import { KafkaProducerService } from 'src/kafka/kafka.producer';
   ],
   controllers: [UserController],
   providers: [
+    UserService,
     KafkaProducerService,
     UserService,
     InterserviceService,
