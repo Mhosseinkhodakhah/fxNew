@@ -40,7 +40,7 @@ export class AppController {
 
     console.log(message , "message is here ")
 
-    const { name } = message.value;
+    const { name } = message;
 
     console.log(name, " im here in hande create user in userr controller ");
     
