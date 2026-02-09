@@ -75,7 +75,14 @@ export class UserService {
           };
 
           // Create wallet through internal service
-          await this.internalService.createWallet(wallet);
+          // await this.internalService.createWallet(wallet);
+
+
+          await this.kafkaService.sendMessage("create-wallet",{
+
+            wallet: wallet
+
+          })
 
           // use kafka instead http 
 
@@ -217,10 +224,10 @@ export class UserService {
 
       let userAfterUpdate = await this.userModel.findById(userId).session(session);
       console.log('adsf', userAfterUpdate);
-      
+
       // Commit the transaction
       await session.commitTransaction();
-
+      
       return {
         message: '',
         statusCode: 200,
