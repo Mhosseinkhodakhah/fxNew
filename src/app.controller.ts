@@ -21,9 +21,6 @@ export class AppController {
   async getHello() {
     return this.appService.getHello();
   }
-
-
-
  
   /**
    * \this is for test only 
@@ -36,8 +33,7 @@ export class AppController {
     @Payload() message: any,
     @Ctx() context: KafkaContext,
   ) {
-
-
+    
     console.log(message , "message is here ")
 
     const { name } = message;
@@ -47,9 +43,6 @@ export class AppController {
 
     await this.userservice.createSpeceficUserForTestKafka(name);
 
-    // await this.kafkaService.sendMessage('test-kafka', {
-    //   name
-    // });
 
     const offset = context.getMessage().offset;
     const partition = context.getPartition();

@@ -14,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
       secretOrKey: process.env.JWT_USER_SECRET!,
     });
   }
-
+  
   async validate(payload: any) {
     // const user = await this.usersService.findOne(payload.phone);
     return { userId: payload._id, phoneNumber: payload.phoneNumber };
