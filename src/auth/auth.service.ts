@@ -32,9 +32,9 @@ export class AuthService {
       const { phoneNumber } = body;
       // if (phoneNumber != '09395835688' && phoneNumber != '09229055682' && phoneNumber != '09223223435' && phoneNumber != '09112333445'){
       //   return {
-      //     message : 'خطای شبکه',
-      //     error : 'خطای شبکه',
-      //     statusCode : 400,
+          // message : 'خطای شبکه',
+          // error : 'خطای شبکه',
+          // statusCode : 400,
       //   }
       // }
       const otp = await this.otpGenerator();

@@ -78,9 +78,7 @@ export class UserService {
           // await this.internalService.createWallet(wallet);
 
 
-          await this.kafkaService.sendMessage("create-wallet",{
-            wallet: wallet
-          })
+          await this.kafkaService.sendMessage("create-wallet", wallet )
 
           // use kafka instead http 
 
