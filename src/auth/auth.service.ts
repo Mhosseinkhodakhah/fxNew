@@ -30,7 +30,7 @@ export class AuthService {
   async sendOtp(@Req() req: any, @Res() res: any, body: sendOtpDto) {
     try {
       const { phoneNumber } = body;
-      if (phoneNumber != '09395835688' && phoneNumber != '09229055682'){
+      if (phoneNumber != '09395835688' && phoneNumber != '09229055682' && phoneNumber != '09223223435' && phoneNumber != '09112333445'){
         return {
           message : 'خطای شبکه',
           error : 'خطای شبکه',

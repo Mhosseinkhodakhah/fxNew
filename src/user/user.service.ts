@@ -79,16 +79,14 @@ export class UserService {
 
 
           await this.kafkaService.sendMessage("create-wallet",{
-
             wallet: wallet
-
           })
 
           // use kafka instead http 
 
-          await this.kafkaService.sendMessage('create-wallet',{
-            wallet
-          })
+          // await this.kafkaService.sendMessage('create-wallet',{
+          //   wallet
+          // })
 
 
           // Commit the transaction
@@ -142,7 +140,7 @@ export class UserService {
         adresses: data.adresses,
         email: data.email,
         authStatus: 2,
-      }, { session });
+      }, { session  });
 
       console.log(user);
 
