@@ -275,7 +275,7 @@ export class UserService {
         const users = await this.userModel.find(searchCondition)
           .skip(limit * (page - 1))
           .limit(limit)
-
+          .sort({createdAt : 'desc'})
         total = await this.userModel.countDocuments(searchCondition)
         return {
           message: '',
@@ -303,9 +303,9 @@ export class UserService {
           : {};
 
         const users = await this.userModel.find(searchCondition)
-
           .skip(limit * (page - 1))
           .limit(limit)
+          .sort({createdAt : 'desc'})
 
         total = await this.userModel.countDocuments(searchCondition)
 
