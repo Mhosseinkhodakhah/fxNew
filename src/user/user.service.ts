@@ -82,15 +82,7 @@ export class UserService {
           // Create wallet through internal service
           // await this.internalService.createWallet(wallet);
 
-
           await this.kafkaService.sendMessage("create-wallet", wallet )
-
-          // use kafka instead http 
-
-          // await this.kafkaService.sendMessage('create-wallet',{
-          //   wallet
-          // })
-
 
           // Commit the transaction
           await session.commitTransaction();
@@ -156,14 +148,14 @@ export class UserService {
         };
       }
 
-      const wallet = {
-        owner: user._id,
-        balance: 0,
-        goldWeight: '0',
-      };
+      // const wallet = {
+      //   owner: user._id,
+      //   balance: 0,
+      //   goldWeight: '0',
+      // };
 
-      // Create wallet through internal service
-      await this.internalService.createWallet(wallet);
+      // // Create wallet through internal service
+      // await this.internalService.createWallet(wallet);
 
       // Commit the transaction
       await session.commitTransaction();
