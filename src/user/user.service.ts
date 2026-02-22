@@ -70,6 +70,11 @@ export class UserService {
 
           const wallet = {
             owner: oldNewUser._id,
+            info:{
+               phoneNumber:oldNewUser.phoneNumber,
+               firstName: oldNewUser.firstName,
+               lastName: oldNewUser.lastName,
+            },
             balance: 0,
             goldWeight: oldUser.data.goldWeight,
           };
