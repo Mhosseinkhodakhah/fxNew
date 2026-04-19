@@ -17,6 +17,7 @@ import { sendOtpDto } from './dto/sendOtpDto.dto';
 import { validateOtpDto } from './dto/validateOtpDto.dto';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { refreshTokenDto } from './dto/refreshTokenDto.dto';
+import { loginWithPasswordDto } from './dto/loginWithPassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -120,6 +121,44 @@ export class AuthController {
     @Body(new ValidationPipe()) body: validateOtpDto,
   ) {
     return this.authService.validateOtp(body);
+  }
+
+  @Post('/login/password')
+  @ApiOperation({ summary: 'login with password' })
+  @ApiResponse({
+    status: 200,
+    description: 'user login with password successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'با موفقیت وارد شدید',
+        error: null,
+        data: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'invalid credentials or user not found',
+    schema: {
+      example: {
+        success: false,
+        message: 'رمز با شماره تلفن همخوانی ندارد',
+        error: 'رمز با شماره تلفن همخوانی ندارد',
+        data: null,
+      },
+    },
+  })
+  @ApiBody({
+    type: loginWithPasswordDto,
+    description: 'Json structure for login with password',
+  })
+  loginWithPassword(
+    @Req() req: any,
+    @Res() res: any,
+    @Body(new ValidationPipe()) body: loginWithPasswordDto,
+  ) {
+    return this.authService.loginWithPassword(body.phoneNumber, body.password);
   }
   
   @Post('/refresh')

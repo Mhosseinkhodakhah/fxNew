@@ -345,7 +345,15 @@ export class AuthService {
         };
       }
 
-      const isMatch = this.comparePasswords(password, user.password);
+      if (!user.password) {
+        return {
+          message: 'برای این کاربر رمز عبور ثبت نشده است',
+          statusCode: 400,
+          error: 'برای این کاربر رمز عبور ثبت نشده است',
+        };
+      }
+
+      const isMatch = await this.comparePasswords(password, user.password);
 
       if (!isMatch) {
         return {
@@ -356,16 +364,16 @@ export class AuthService {
       }
       const token = await this.tokenize.tokenize(
         { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' , status : user.identityStatus  },
-        '1m',
+        '10H',
         0,
       );
       const refreshToken = await this.tokenize.tokenize(
         { _id: user?._id, phoneNumber: user?.phoneNumber, role: 'user' },
-        '1m',
+        '10h',
         1,
       );
       return {
-        message: 'ارسال کد تایید موفق',
+        message: 'با موفقیت وارد شدید',
         statusCode: 200,
         data: { refreshToken: refreshToken, token: token, ...user?.toObject() },
       };

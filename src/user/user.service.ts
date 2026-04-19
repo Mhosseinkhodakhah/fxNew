@@ -19,6 +19,7 @@ import { IdentityService } from 'src/identity/identity.service';
 import winston, { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER, WinstonLogger } from 'nest-winston';
 import { threadId } from 'worker_threads';
+import * as bcrypt from 'bcrypt';
 // import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
@@ -128,14 +129,20 @@ export class UserService {
     try {
       console.log(userId , data);
 
-      const user = await this.userModel.findByIdAndUpdate(userId, {
+      const updatePayload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
         fatherName: data.fatherName,
         adresses: data.adresses,
         email: data.email,
         authStatus: 2,
-      }, { session  });
+      };
+
+      if (data.password) {
+        updatePayload.password = await bcrypt.hash(data.password, 10);
+      }
+
+      const user = await this.userModel.findByIdAndUpdate(userId, updatePayload, { session  });
 
       console.log(user);
 
@@ -1320,6 +1327,70 @@ export class UserService {
         statusCode: 500,
         error: 'خطای داخلی سیستم',
       };
+    }
+  }
+
+  async updatePassword(userId: string, currentPassword: string, newPassword: string) {
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await this.userModel.findById(userId).session(session);
+
+      if (!user) {
+        await session.abortTransaction();
+        return {
+          message: 'کاربر پیدا نشد',
+          statusCode: 400,
+          error: 'کاربر پیدا نشد',
+        };
+      }
+
+      if (!user.password) {
+        await session.abortTransaction();
+        return {
+          message: 'برای این کاربر رمز عبور ثبت نشده است',
+          statusCode: 400,
+          error: 'برای این کاربر رمز عبور ثبت نشده است',
+        };
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        await session.abortTransaction();
+        return {
+          message: 'رمز عبور فعلی نادرست است',
+          statusCode: 400,
+          error: 'رمز عبور فعلی نادرست است',
+        };
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const updatedUser = await this.userModel
+        .findByIdAndUpdate(userId, { password: hashedPassword }, { session, new: true })
+        .session(session);
+
+      await session.commitTransaction();
+
+      return {
+        message: 'رمز عبور شما با موفقیت تغییر یافت',
+        statusCode: 200,
+        data: updatedUser ? {
+          _id: updatedUser._id,
+          phoneNumber: updatedUser.phoneNumber,
+        } : {},
+      };
+    } catch (error) {
+      console.log('error', error);
+      await session.abortTransaction();
+      return {
+        message: 'مشکلی از سمت سرور به وجود آمده',
+        statusCode: 500,
+        error: 'خطای داخلی سیستم',
+      };
+    } finally {
+      session.endSession();
     }
   }
 }

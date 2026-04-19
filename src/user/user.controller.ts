@@ -24,6 +24,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { compelteRegisterDto } from './dto/completeRegister.dto';
+import { UpdatePasswordDto } from './dto/updatePassword.dto';
 import { JwtAuthGuard } from 'src/jwt/jwt-auth.guard';
 import { UpdateAddressDto } from './dto/updateAdress.sto';
 import { AddressDto } from './dto/addAdress.dto';
@@ -1076,6 +1077,53 @@ export class UserController {
   // @ApiBearerAuth()
   async getUserByNationalCode(@Query('nationalCode') query: string) {
     return this.userService.getUserByNationalCode(query);
+  }
+
+  @Post('/update-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password updated successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'رمز عبور شما با موفقیت تغییر یافت',
+        error: null,
+        data: {
+          _id: 'userId',
+          phoneNumber: '0922905555',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid password or user not found',
+    schema: {
+      example: {
+        success: false,
+        message: 'رمز عبور فعلی نادرست است',
+        error: 'رمز عبور فعلی نادرست است',
+        data: null,
+      },
+    },
+  })
+  @ApiBody({
+    type: UpdatePasswordDto,
+    description: 'Update password data',
+  })
+  async updatePassword(
+    @Req() req: any,
+    @Body(new ValidationPipe()) body: UpdatePasswordDto,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.updatePassword(
+      userId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 
 }

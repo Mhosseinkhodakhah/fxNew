@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "@nestjs/class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "@nestjs/class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsArray, ValidateNested } from "class-validator";
@@ -38,6 +38,14 @@ export class compelteRegisterDto {
     required: true
   })
   email: string
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    example: 'strongPassword123',
+    required: false
+  })
+  password?: string
 
   @ApiProperty({
     type: [AddressDto],
