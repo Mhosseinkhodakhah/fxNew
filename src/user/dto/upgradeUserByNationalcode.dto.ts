@@ -10,7 +10,7 @@ export class updateUserInfoByNationalCodeDto{
         example : '4980323707',
         required : true
     })
-    nationalCode : string
+    nationalCode?: string
 
     @IsString()
     @IsOptional()
@@ -18,7 +18,7 @@ export class updateUserInfoByNationalCodeDto{
         example : '09902223344',
         required : true
     })
-    phoneNumber : string
+    phoneNumber?: string
 
     @IsString()
     @IsOptional()
@@ -26,7 +26,7 @@ export class updateUserInfoByNationalCodeDto{
         example : 'علیرضا',
         required : true
     })
-    firstName : string
+    firstName?: string
 
     @IsString()
     @IsOptional()
@@ -34,7 +34,7 @@ export class updateUserInfoByNationalCodeDto{
         example : 'زارع',
         required : true
     })
-    lastName:string
+    lastName?: string
 }
 
 
