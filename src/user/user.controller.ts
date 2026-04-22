@@ -1128,6 +1128,10 @@ export class UserController {
   }
 
   @Post('/update-info-by-nationalCode')
+  @ApiBody({
+    type: updateUserInfoByNationalCodeDto,
+    description: 'Update data',
+  })
   // @UseGuards(JwtAdminAuthGuard)
   // @ApiBearerAuth()
   async updateUserInfoByNationalCode(@Body() body: updateUserInfoByNationalCodeDto) {
