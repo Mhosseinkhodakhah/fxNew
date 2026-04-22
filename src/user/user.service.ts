@@ -20,6 +20,7 @@ import winston, { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER, WinstonLogger } from 'nest-winston';
 import { threadId } from 'worker_threads';
 import * as bcrypt from 'bcrypt';
+import { updateUserInfoByNationalCodeDto } from './dto/upgradeUserByNationalcode.dto';
 // import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
@@ -1391,6 +1392,45 @@ export class UserService {
       };
     } finally {
       session.endSession();
+    }
+  }
+
+    async updateUserInfoByNationalCode(body: updateUserInfoByNationalCodeDto) {
+
+    try {
+      let userExistance = await this.userModel.findOne({
+        nationalCode: body.nationalCode,
+      })
+
+      if (!userExistance) {
+        return {
+          message: 'کد ملی در اپلیکیشن وجود ندارد.',
+          statusCode: 200,
+        };
+      }
+
+      const user = await this.userModel.findOneAndUpdate(
+        { nationalCode: body.nationalCode },
+        {
+          firstName: body.firstName,
+          lastName: body.lastName,
+          phoneNumber: body.phoneNumber
+        },
+        { new: true }
+      );
+
+      return {
+        message: 'اطلاعات کاربر با موفقیت به روز رسانی شد.',
+        statusCode: 200,
+        data: user,
+      };
+    } catch (error) {
+      console.log('error', error);
+      return {
+        message: 'مشکلی از سمت سرور به وجود آمده',
+        statusCode: 500,
+        error: 'خطای داخلی سیستم',
+      };
     }
   }
 }

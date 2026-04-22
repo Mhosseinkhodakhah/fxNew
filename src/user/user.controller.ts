@@ -33,6 +33,7 @@ import { JwtAdminAuthGuard } from 'src/jwt/admin-jwt-auth.guard';
 import { userFilterDto } from './dto/userFilter.dto';
 import { LockerService } from 'src/locker/locker.service';
 import { InternalTokenGuard } from 'src/guard/internal.guard';
+import { updateUserInfoByNationalCodeDto } from './dto/upgradeUserByNationalcode.dto';
 
 @Controller('user')
 export class UserController {
@@ -1124,6 +1125,13 @@ export class UserController {
       body.currentPassword,
       body.newPassword,
     );
+  }
+
+  @Post('/update-info-by-nationalCode')
+  // @UseGuards(JwtAdminAuthGuard)
+  // @ApiBearerAuth()
+  async updateUserInfoByNationalCode(@Body() body: updateUserInfoByNationalCodeDto) {
+    return this.userService.updateUserInfoByNationalCode(body);
   }
 
 }
