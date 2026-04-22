@@ -1402,6 +1402,10 @@ export class UserService {
         nationalCode: body.nationalCode,
       })
 
+      let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
+
+      console.log('existance of user' , existanceAll)
+
       if (!userExistance) {
         return {
           message: 'کد ملی در اپلیکیشن وجود ندارد.',
@@ -1412,9 +1416,9 @@ export class UserService {
       const user = await this.userModel.findOneAndUpdate(
         { nationalCode: body.nationalCode },
         {
-          firstName: body.firstName,
-          lastName: body.lastName,
-          phoneNumber: body.phoneNumber
+          firstName: (userExistance.firstName != body.firstName) ? body.firstName : userExistance.firstName,
+          lastName: (userExistance.lastName != body.lastName) ? body.lastName : userExistance.lastName,
+          phoneNumber: (userExistance.phoneNumber != body.phoneNumber) ? body.phoneNumber : userExistance.phoneNumber
         },
         { new: true }
       );
