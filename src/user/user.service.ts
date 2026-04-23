@@ -1401,7 +1401,7 @@ export class UserService {
       let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
       
 
-      await this.userModel.findOneAndDelete({phoneNumber : '09229055682'})
+      await this.userModel.findByIdAndDelete('68ac2dbe7be6044751f654cf')
       
       console.log('existance of user' , existanceAll)
       
