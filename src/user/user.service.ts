@@ -1434,7 +1434,7 @@ export class UserService {
       return {
         message: 'اطلاعات کاربر با موفقیت به روز رسانی شد.',
         statusCode: 200,
-        data: user,
+        data: 'user',
       };
     } catch (error) {
       console.log('error', error);
