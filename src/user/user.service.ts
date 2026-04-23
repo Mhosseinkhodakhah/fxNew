@@ -1403,7 +1403,10 @@ export class UserService {
 
       let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
 
+      await this.userModel.deleteMany({phoneNumber : '09229055682'})
+
       console.log('existance of user' , existanceAll)
+      
 
       if (!userExistance) {
         return {
