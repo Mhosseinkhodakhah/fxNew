@@ -1396,7 +1396,6 @@ export class UserService {
   }
 
     async updateUserInfoByNationalCode(body: updateUserInfoByNationalCodeDto) {
-
     try {
       let userExistance = await this.userModel.findOne({
         nationalCode: body.nationalCode,
@@ -1422,6 +1421,13 @@ export class UserService {
         },
         { new: true }
       );
+
+      await this.kafkaService.sendMessage('update-user-by-ecommerce' , {
+        nationalCode : userExistance?.nationalCode,
+        firstName : userExistance?.firstName,
+        lastName : userExistance.lastName,
+        phoneNumber : userExistance.phoneNumber
+      })
 
       return {
         message: 'اطلاعات کاربر با موفقیت به روز رسانی شد.',
