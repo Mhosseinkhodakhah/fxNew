@@ -34,7 +34,7 @@ export class UserService {
     @InjectConnection() private readonly connection: Connection,
     private identityOfUser: IdentityService
   ) {
-    this.logger.log('hello its test for logging')
+    // this.logger.log('hello its test for logging')
   }
 
   async checkOrCreate(phoneNumber: string) {
