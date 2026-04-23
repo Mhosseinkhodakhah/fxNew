@@ -1404,32 +1404,32 @@ export class UserService {
       
       console.log('existance of user' , existanceAll)
       
-      let userExistance = await this.userModel.findOne({
-        nationalCode: body.nationalCode,
-      })
-      if (!userExistance) {
-        return {
-          message: 'کد ملی در اپلیکیشن وجود ندارد.',
-          statusCode: 200,
-        };
-      }
+      // let userExistance = await this.userModel.findOne({
+      //   nationalCode: body.nationalCode,
+      // })
+      // if (!userExistance) {
+      //   return {
+      //     message: 'کد ملی در اپلیکیشن وجود ندارد.',
+      //     statusCode: 200,
+      //   };
+      // }
 
-      const user = await this.userModel.findOneAndUpdate(
-        { nationalCode: body.nationalCode },
-        {
-          firstName: (userExistance.firstName != body.firstName) ? body.firstName : userExistance.firstName,
-          lastName: (userExistance.lastName != body.lastName) ? body.lastName : userExistance.lastName,
-          phoneNumber: (userExistance.phoneNumber != body.phoneNumber) ? body.phoneNumber : userExistance.phoneNumber
-        },
-        { new: true }
-      );
+      // const user = await this.userModel.findOneAndUpdate(
+      //   { nationalCode: body.nationalCode },
+      //   {
+      //     firstName: (userExistance.firstName != body.firstName) ? body.firstName : userExistance.firstName,
+      //     lastName: (userExistance.lastName != body.lastName) ? body.lastName : userExistance.lastName,
+      //     phoneNumber: (userExistance.phoneNumber != body.phoneNumber) ? body.phoneNumber : userExistance.phoneNumber
+      //   },
+      //   { new: true }
+      // );
 
-      await this.kafkaService.sendMessage('update-user-by-ecommerce' , {
-        nationalCode : userExistance?.nationalCode,
-        firstName : userExistance?.firstName,
-        lastName : userExistance.lastName,
-        phoneNumber : userExistance.phoneNumber
-      })
+      // await this.kafkaService.sendMessage('update-user-by-ecommerce' , {
+      //   nationalCode : userExistance?.nationalCode,
+      //   firstName : userExistance?.firstName,
+      //   lastName : userExistance.lastName,
+      //   phoneNumber : userExistance.phoneNumber
+      // })
 
       return {
         message: 'اطلاعات کاربر با موفقیت به روز رسانی شد.',
