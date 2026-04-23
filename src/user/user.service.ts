@@ -1398,12 +1398,12 @@ export class UserService {
     async updateUserInfoByNationalCode(body: updateUserInfoByNationalCodeDto) {
     try {
       
-      // let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
+      let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
       
 
       // await this.userModel.findByIdAndDelete('68ac2dbe7be6044751f654cf')
       
-      // console.log('existance of user' , existanceAll)
+      console.log('existance of user' , existanceAll)
       
       let userExistance = await this.userModel.findOne({
         nationalCode: body.nationalCode,
