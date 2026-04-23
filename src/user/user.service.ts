@@ -21,19 +21,20 @@ import { WINSTON_MODULE_PROVIDER, WinstonLogger } from 'nest-winston';
 import { threadId } from 'worker_threads';
 import * as bcrypt from 'bcrypt';
 import { updateUserInfoByNationalCodeDto } from './dto/upgradeUserByNationalcode.dto';
+import { LoggerService } from 'src/logger/logger.service';
 // import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
 export class UserService {
   constructor(
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: WinstonLogger,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: LoggerService,
     @InjectModel('userM') private userModel: Model<UserDocument>,
     private readonly internalService: InterserviceService,
     private readonly kafkaService: KafkaProducerService,
     @InjectConnection() private readonly connection: Connection,
     private identityOfUser: IdentityService
   ) {
-    this.logger.warn({ message: 'hello its test for logging    ' })
+    this.logger.log('hello its test for logging')
   }
 
   async checkOrCreate(phoneNumber: string) {
@@ -55,40 +56,55 @@ export class UserService {
         }
         if (oldUser && oldUser.statusCode == 1) {
           console.log('oldUser', oldUser);
+          let existance = await this.userModel.find({
+            nationalCode : oldUser.data.nationalCode
+          })
 
-          const oldNewUser = await this.userModel.create({
-            phoneNumber,
-            firstName: oldUser.data.firstName,
-            lastName: oldUser.data.lastName,
-            fatherName: oldUser.data.fatherName,
-            nationalCode: oldUser.data.nationalCode,
-            birthDate: oldUser.data.birthDate,
-            authStatus: 3,
-            identityStatus: 1,
-          });
+          if (existance.length > 0){
+            this.logger.log('user exists more than one time' , JSON.stringify(existance))
+            await this.userModel.findByIdAndUpdate(existance[0]._id , {
+              firstName: oldUser.data.firstName,
+              lastName: oldUser.data.lastName,
+              fatherName: oldUser.data.fatherName,
+              phoneNumber : oldUser.data.phoneNumber,
+              birthDate: oldUser.data.birthDate,
+            })
+            await session.commitTransaction();
+            return existance[0];
+          }else{
+            const oldNewUser = await this.userModel.create({
+              phoneNumber,
+              firstName: oldUser.data.firstName,
+              lastName: oldUser.data.lastName,
+              fatherName: oldUser.data.fatherName,
+              nationalCode: oldUser.data.nationalCode,
+              birthDate: oldUser.data.birthDate,
+              authStatus: 3,
+              identityStatus: 1,
+            });
+            console.log('its hereeee created old userrrrrrrrrrrrr', oldNewUser)
+  
+            const wallet = {
+              owner: oldNewUser._id,
+              info:{
+                 phoneNumber:oldNewUser.phoneNumber,
+                 firstName: oldNewUser.firstName,
+                 lastName: oldNewUser.lastName,
+              },
+              balance: 0,
+              goldWeight: oldUser.data.goldWeight,
+            };
+  
+            // Create wallet through internal service
+            // await this.internalService.createWallet(wallet);
+  
+            await this.kafkaService.sendMessage("create-wallet", wallet )
+  
+            // Commit the transaction
+            await session.commitTransaction();
+            return oldNewUser;
+          }
 
-
-          console.log('its hereeee created old userrrrrrrrrrrrr', oldNewUser)
-
-          const wallet = {
-            owner: oldNewUser._id,
-            info:{
-               phoneNumber:oldNewUser.phoneNumber,
-               firstName: oldNewUser.firstName,
-               lastName: oldNewUser.lastName,
-            },
-            balance: 0,
-            goldWeight: oldUser.data.goldWeight,
-          };
-
-          // Create wallet through internal service
-          // await this.internalService.createWallet(wallet);
-
-          await this.kafkaService.sendMessage("create-wallet", wallet )
-
-          // Commit the transaction
-          await session.commitTransaction();
-          return oldNewUser;
         } else if (oldUser.statusCode == 0) {
           let newUser = await this.userModel.create(
             { phoneNumber: phoneNumber, authStatus: 1, identityStatus: 0 },
@@ -1424,12 +1440,12 @@ export class UserService {
         },
         { new: true }
       );
-
+      
       await this.kafkaService.sendMessage('update-user-by-ecommerce' , {
-        nationalCode : userExistance?.nationalCode,
-        firstName : userExistance?.firstName,
-        lastName : userExistance.lastName,
-        phoneNumber : userExistance.phoneNumber
+        nationalCode : user?.nationalCode,
+        firstName : user?.firstName,
+        lastName : user?.lastName,
+        phoneNumber : user?.phoneNumber
       })
 
       return {
