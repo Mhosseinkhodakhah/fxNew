@@ -83,7 +83,7 @@ export class UserService {
               identityStatus: 1,
             });
             console.log('its hereeee created old userrrrrrrrrrrrr', oldNewUser)
-  
+            
             const wallet = {
               owner: oldNewUser._id,
               info:{
@@ -1416,6 +1416,12 @@ export class UserService {
       
       let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
       
+      await this.kafkaService.sendMessage('update-user-by-ecommerce', {
+        nationalCode: body.nationalCode,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        phoneNumber: body.phoneNumber
+      })
 
       // await this.userModel.findByIdAndDelete('68ac2dbe7be6044751f654cf')
       
@@ -1424,6 +1430,7 @@ export class UserService {
       let userExistance = await this.userModel.findOne({
         nationalCode: body.nationalCode,
       })
+
       if (!userExistance) {
         return {
           message: 'کد ملی در اپلیکیشن وجود ندارد.',
