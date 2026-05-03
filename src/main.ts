@@ -9,6 +9,39 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as apiMetrics from 'prometheus-api-metrics';
 
+
+const wait = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+async function startMicroservicesWithRetry(app: any) {
+  const maxAttempts = Number(process.env.KAFKA_START_MAX_RETRIES || 10);
+  const retryDelayMs = Number(process.env.KAFKA_START_RETRY_DELAY_MS || 1500);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await app.startAllMicroservices();
+      return;
+    } catch (error: any) {
+      const errorMessage = String(error?.message || '');
+      const errorType = String(error?.type || '');
+      const isTopicMetadataError =
+        errorType === 'UNKNOWN_TOPIC_OR_PARTITION' ||
+        errorMessage.includes('does not host this topic-partition') ||
+        errorMessage.includes('UNKNOWN_TOPIC_OR_PARTITION');
+
+      if (!isTopicMetadataError || attempt === maxAttempts) {
+        throw error;
+      }
+
+      console.warn(
+        `[Kafka] startAllMicroservices failed (${attempt}/${maxAttempts}) due to topic metadata propagation. Retrying in ${retryDelayMs}ms...`,
+      );
+      await wait(retryDelayMs);
+    }
+  }
+}
+
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -80,8 +113,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor(), loggingInterceptor);
   
   app.useGlobalFilters(new HttpExceptionFilter());
-   app.connectMicroservice(kafkaConsumerConfig);
-   await app.startAllMicroservices();
+  app.connectMicroservice(kafkaConsumerConfig);
+  await startMicroservicesWithRetry(app);
 
   await app.listen(process.env.PORT ?? 9010);
 }
