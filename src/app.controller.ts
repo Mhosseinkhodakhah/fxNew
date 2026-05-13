@@ -22,33 +22,4 @@ export class AppController {
     return this.appService.getHello();
   }
  
-  /**
-   * \this is for test only 
-   * @param message
-   * @param context
-   * @returns
-   */
-  @EventPattern('test-kafka')
-  async handleUserFoekafka(
-    @Payload() message: any,
-    @Ctx() context: KafkaContext,
-  ) {
-    
-    console.log(message , "message is here ")
-
-    const { name } = message;
-
-    console.log(name, " im here in hande create user in userr controller ");
-    
-
-    await this.userservice.createSpeceficUserForTestKafka(name);
-
-
-    const offset = context.getMessage().offset;
-    const partition = context.getPartition();
-
-    console.log(
-      `Received test-kafka partition ${partition}, offset ${offset}`,
-    );
-  }
 }
