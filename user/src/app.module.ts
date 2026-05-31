@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './user/user.module';
-import { KafkaService } from './kafka/kafka.service';
+// import { KafkaService } from './kafka/kafka.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RedisService } from './redis/redis.service';
 import { ConfigModule } from '@nestjs/config';
@@ -16,21 +16,21 @@ import { winstonConfig } from './common/winston.config';
       isGlobal:true,
       load: [configuration],
     }),
-    ClientsModule.register([
-      {
-        name: 'KAFKA_SERVICE',
-        transport: Transport.KAFKA,
-        options: {
-          client: {
-            clientId: 'user-service',
-            brokers: ['localhost:9092'],
-          },
-          consumer: {
-            groupId: 'user-service-consumer',
-          },
-        },
-      },
-    ]),
+    // ClientsModule.register([
+    //   {
+    //     name: 'KAFKA_SERVICE',
+    //     transport: Transport.KAFKA,
+    //     options: {
+    //       client: {
+    //         clientId: 'user-service',
+    //         brokers: ['localhost:9092'],
+    //       },
+    //       consumer: {
+    //         groupId: 'user-service-consumer',
+    //       },
+    //     },
+    //   },
+    // ]),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost', // چون خارج از داکر ران می‌کنیم
@@ -45,6 +45,6 @@ import { winstonConfig } from './common/winston.config';
     UsersModule,
   ],
   controllers: [],
-  providers: [KafkaService, RedisService],
+  providers: [ RedisService],
 })
 export class AppModule {}
