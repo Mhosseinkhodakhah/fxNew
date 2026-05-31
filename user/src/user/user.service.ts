@@ -1,1471 +1,250 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { UserDocument } from './entities/user.entity';
-import { compelteRegisterDto } from './dto/completeRegister.dto';
-import { InterserviceService } from '../interservice/interservice.service';
-import mongoose, { Model, ClientSession, Types, SchemaTypes, Connection } from 'mongoose';
-import { refreshTokenDto } from 'src/auth/dto/refreshTokenDto.dto';
-import { upgradeProfileDto } from './dto/upgradeProfile.dto';
-import { AddressDto } from './dto/addAdress.dto';
-import { UpdateAddressDto } from './dto/updateAdress.sto';
-import { IdentityDto } from 'src/user/dto/Identity.dto';
-import { use } from 'passport';
-import { userFilterDto } from './dto/userFilter.dto';
-import { KafkaProducerService } from 'src/kafka/kafka.producer';
-import { log } from 'util';
-import { IdentityService } from 'src/identity/identity.service';
-import winston, { Logger } from 'winston';
-import { WINSTON_MODULE_PROVIDER, WinstonLogger } from 'nest-winston';
-import { threadId } from 'worker_threads';
-import * as bcrypt from 'bcrypt';
-import { updateUserInfoByNationalCodeDto } from './dto/upgradeUserByNationalcode.dto';
-import { LoggerService } from 'src/logger/logger.service';
-// import { ClientKafka } from '@nestjs/microservices';
+// user-service/src/modules/users/users.service.ts
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DeepPartial, Repository } from 'typeorm';
+import { User } from './entities/user.entity';
+import { UserRole } from 'src/common/types/enum';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
-export class UserService {
+export class UsersService {
+
   constructor(
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: LoggerService,
-    @InjectModel('userM') private userModel: Model<UserDocument>,
-    private readonly internalService: InterserviceService,
-    private readonly kafkaService: KafkaProducerService,
-    @InjectConnection() private readonly connection: Connection,
-    private identityOfUser: IdentityService
-  ) {
-    // this.logger.log('hello its test for logging')
-  }
+      @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
-  async checkOrCreate(phoneNumber: string) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
+  async findOrCreate(email: string) {
+    // ۱. بررسی اینکه آیا کاربری با این ایمیل وجود دارد یا خیر
+    // relations را می‌آوریم تا اطلاعات پروفایل و تنظیمات هم همراهش لود شود
+    let user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['profile', 'settings'],
+    });
 
-    try {
-      const user = await this.userModel.findOne({ phoneNumber: phoneNumber })
-
-      console.log('user after getting', user);
-      if (!user) {
-        const oldUser =
-          await this.internalService.checkExistOldUser(phoneNumber);
-        console.log(oldUser);
-
-        if (oldUser.statusCode == 2) {
-          await session.abortTransaction();
-          return;
-        }
-        if (oldUser && oldUser.statusCode == 1) {
-          console.log('oldUser', oldUser);
-          let existance = await this.userModel.find({
-            nationalCode : oldUser.data.nationalCode
-          })
-
-          if (existance.length > 0){
-            this.logger.log('user exists more than one time' , JSON.stringify(existance))
-            await this.userModel.findByIdAndUpdate(existance[0]._id , {
-              firstName: oldUser.data.firstName,
-              lastName: oldUser.data.lastName,
-              fatherName: oldUser.data.fatherName,
-              phoneNumber : oldUser.data.phoneNumber,
-              birthDate: oldUser.data.birthDate,
-            })
-            await session.commitTransaction();
-            return existance[0];
-          }else{
-            const oldNewUser = await this.userModel.create({
-              phoneNumber,
-              firstName: oldUser.data.firstName,
-              lastName: oldUser.data.lastName,
-              fatherName: oldUser.data.fatherName,
-              nationalCode: oldUser.data.nationalCode,
-              birthDate: oldUser.data.birthDate,
-              authStatus: 3,
-              identityStatus: 1,
-            });
-            console.log('its hereeee created old userrrrrrrrrrrrr', oldNewUser)
-            
-            const wallet = {
-              owner: oldNewUser._id,
-              info:{
-                 phoneNumber:oldNewUser.phoneNumber,
-                 firstName: oldNewUser.firstName,
-                 lastName: oldNewUser.lastName,
-              },
-              balance: 0,
-              goldWeight: oldUser.data.goldWeight,
-            };
-  
-            // Create wallet through internal service
-            // await this.internalService.createWallet(wallet);
-  
-            await this.kafkaService.sendMessage("create-wallet", wallet )
-  
-            // Commit the transaction
-            await session.commitTransaction();
-            return oldNewUser;
-          }
-
-        } else if (oldUser.statusCode == 0) {
-          let newUser = await this.userModel.create(
-            { phoneNumber: phoneNumber, authStatus: 1, identityStatus: 0 },
-          );
-          console.log('new user isssssssssss', newUser)
-          // Commit the transaction
-          await session.commitTransaction();
-          return newUser;
-        }
-      }
-
-      // Commit the transaction
-      await session.commitTransaction();
-      return user;
-    } catch (error) {
-      console.log(error);
-      await session.abortTransaction();
+    // ۲. اگر کاربر وجود داشت، همان را برمی‌گردانیم
+    if (user) {
+      this.logger.log(`User found with email: ${email}`);
       return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم'
-      }
-    } finally {
-      session.endSession();
-    }
-  }
-
-
-  /**
-   * its for completing registrating
-   * @param userId 
-   * @param data 
-   * @returns 
-   */
-  async completeRegister(userId: string, data: compelteRegisterDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      console.log(userId , data);
-
-      const updatePayload: any = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        fatherName: data.fatherName,
-        adresses: data.adresses,
-        email: data.email,
-        authStatus: 2,
-      };
-
-      if (data.password) {
-        updatePayload.password = await bcrypt.hash(data.password, 10);
-      }
-
-      const user = await this.userModel.findByIdAndUpdate(userId, updatePayload, { session  });
-
-      console.log(user);
-
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      // const wallet = {
-      //   owner: user._id,
-      //   balance: 0,
-      //   goldWeight: '0',
-      // };
-
-      // // Create wallet through internal service
-      // await this.internalService.createWallet(wallet);
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      return {
-        message: 'ثبت نام شما کامل شد',
-        statusCode: 200,
-        data: user,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-  async identity(userId: string, data: IdentityDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      let userExistance = await this.userModel.find({
-        nationalCode: data.nationalCode,
-      }).session(session);
-
-      if (userExistance.length > 0) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر گرامی کد ملی شما در اپلیکیشن وجود دارد.',
-          statusCode: 400,
-          error: 'کاربر گرامی کد ملی شما در اپلیکیشن وجود دارد.',
-        };
-      }
-
-      const user = await this.userModel.findByIdAndUpdate(userId, {
-        birthDate: data.birthDate,
-        nationalCode: data.nationalCode,
-        firstName : data.firstName,
-        lastName : data.lastName,
-        fatherName : data.fatherName,
-        authStatus: 2,
-        identityStatus: 2,
-      }, { session });
-
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      let userAfterUpdate = await this.userModel.findById(userId).session(session);
-      console.log('adsf', userAfterUpdate);
-
-      // Commit the transaction
-      await session.commitTransaction();
-      
-      return {
-        message: '',
-        statusCode: 200,
-        data: user,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-  async getAllUser(query: userFilterDto) {
-    try {
-      let { search } = query;
-
-      const hasSearch = query.search && query.search !== 'undefined';
-      const limit = query.limit && !isNaN(+query.limit) ? query.limit : 20
-      const page = query.page && !isNaN(+query.page) ? query.page : 1
-      console.log('its queryyyy', query)
-      let total;
-
-      if (!isNaN(+query.identityStatus)) {
-        const searchCondition: any = hasSearch
-          ? {
-            $and: [
-              {
-                $or: [
-                  { firstName: { $regex: new RegExp(search, 'i') } },
-                  { lastName: { $regex: new RegExp(search, 'i') } },
-                  { nationalCode: { $regex: new RegExp(search, 'i') } },
-                  { phoneNumber: { $regex: new RegExp(search, 'i') } },
-                ],
-              }, {
-                identityStatus: query.identityStatus
-              }
-            ]
-          }
-          : {
-            identityStatus: query.identityStatus
-          };
-
-        const users = await this.userModel.find(searchCondition)
-          .skip(limit * (page - 1))
-          .limit(limit)
-          .sort({createdAt : 'desc'})
-        total = await this.userModel.countDocuments(searchCondition)
-        return {
-          message: '',
-          statusCode: 200,
-          data: {
-            users,
-            pagination: {
-              total,
-              page,
-              limit,
-              totalPages: Math.ceil(total / limit),
-            },
-          },
-        };
-      } else {
-        const searchCondition: any = hasSearch
-          ? {
-            $or: [
-              { firstName: { $regex: new RegExp(search, 'i') } },
-              { lastName: { $regex: new RegExp(search, 'i') } },
-              { nationalCode: { $regex: new RegExp(search, 'i') } },
-              { phoneNumber: { $regex: new RegExp(search, 'i') } },
-            ],
-          }
-          : {};
-
-        const users = await this.userModel.find(searchCondition)
-          .skip(limit * (page - 1))
-          .limit(limit)
-          .sort({createdAt : 'desc'})
-
-        total = await this.userModel.countDocuments(searchCondition)
-
-        return {
-          message: '',
-          statusCode: 200,
-          data: {
-            users,
-            pagination: {
-              total,
-              page,
-              limit,
-              totalPages: Math.ceil(total / limit),
-            },
-          },
-        };
-      }
-    } catch (error) {
-      console.log('error', error);
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    }
-  }
-
-  async getUsersProvinces() {
-    try {
-      const array = [] as { name: string; value: number }[];
-
-      const users = await this.userModel.find();
-
-      for (const user of users) {
-        for (const addr of user.adresses) {
-          const province = addr.province?.trim();
-          if (!province) continue;
-
-          const checkForExistingProvince = array.find(
-            (item) => item.name === province,
-          );
-
-          if (checkForExistingProvince) {
-            checkForExistingProvince.value += 1;
-          } else {
-            array.push({ name: province, value: 1 });
-          }
-        }
-      }
-
-      return {
-        data: array,
-        message: 'تعداد کاربران بر اساس استان',
-        statusCode: 200,
-      };
-    } catch (error) {
-      console.log('errrrr', error);
-      return {
-        data: null,
-        message: 'خطا در دریافت اطلاعات',
-        statusCode: 500,
-      };
-    }
-  }
-
-
-  async getAddressOfOrder(user : string , address : string){
-    let userData = await this.userModel.findById(user)
-    if (!userData){
-      return {
-        msg : 'notFound',
-        statusCode : 400,
-        code : 'GAOO0'
+        message : 'done',
+        statusCode:200,
+        data : user
       }
     }
 
-    // let userAddress;
-    // if (userData.adresses.length>0){
-    //   for (let i of userData.adresses){
-    //     if (i._id.toString() == address.toString()){
-    //       userAddress = i
-    //     }
-    //   }
-    // }else{
-    //   return {
-    //     msg : 'notFound',
-    //     statusCode : 400,
-    //     code : 'GAOO1'
-    //   }
-    // }
+    // ۳. اگر کاربر وجود نداشت، یک کاربر جدید می‌سازیم
+    this.logger.log(`Creating new user with email: ${email}`);
+
+    user = this.userRepository.create({
+      email,
+      isVerify: true,
+      // چون در فایل user.entity.ts برای profile و settings مقدار cascade: true قرار دادید،
+      // با پاس دادن آبجکت خالی {} تایپ‌اوآرام خودش رکوردهای مربوطه را در جداول Profile و Settings می‌سازد.
+      profile: {},
+      settings: {},
+    });
+
+    // ذخیره کاربر جدید در دیتابیس (رکوردهای پروفایل و ستینگز هم خودکار ساخته می‌شوند)
+    await this.userRepository.save(user);
 
     return {
-      msg : 'found',
-      statusCode : 200,
-      code : 'GAOO2',
-      data : userData
-    }
-
-
+        message : 'done',
+        statusCode:200,
+        data : user
+      }
   }
 
-
-  async upgradeProfile(userId: string, data: upgradeProfileDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try { 
-      console.log(userId);
-
-      const user = await this.userModel.findByIdAndUpdate(userId, {
-        birthDate: data.birthDate,
-        nationalCode: data.nationalCode,
-        firstName : data.firstName,
-        lastName : data.lastName,
-        fatherName : data.fatherName,
-        identityStatus: 2,
-      }, { session });
-
-      console.log(user);
-
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      return {
-        message: 'ثبت نام شما کامل شد',
-        statusCode: 200,
-        data: user,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-  async addAddress(userId: string, data: AddressDto) {
-    try {
-      const user = await this.userModel.findByIdAndUpdate(
-        userId,
-        { $push: { adresses: data } },
-        { new: true },
-      );
-      if (!user) {
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-      return {
-        message: '',
-        statusCode: 200,
-        data: user.adresses,
-      };
-    } catch (error) {
-      console.log('error in creating address', error)
-      return {
-        message: 'خطای داخلی سیستم',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم'
-      };
-    }
-  }
-
-
-
-  async addAddressByAdminInPhoneBuy(nationalCode: string, data: AddressDto) {
-    try {
-      const user = await this.userModel.findOneAndUpdate(
-        { nationalCode },
-        { $push: { adresses: data } },
-        { new: true },
-      );
-      if (!user) {
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-      return {
-        message: '',
-        statusCode: 200,
-        data: user.adresses,
-      };
-    } catch (error) {
-      console.log('error in creating address', error)
-      return {
-        message: 'خطای داخلی سیستم',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم'
-      };
-    }
-  }
-
-
-  async getAddresses(userId: string) {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      return {
-        message: 'کاربر پیدا نشد',
-        statusCode: 400,
-        error: 'کاربر پیدا نشد',
-      };
-    }
-    return {
-      message: '',
-      statusCode: 200,
-      data: user.adresses,
-    };
-  }
-
-  async getSpecificAddress(req: any, res: any, adressId: string) {
-    let userId = req.user.userId;
-    let address = await this.userModel.findById(userId);
-
-    if (!address) {
-      return {
-        message: 'آدرس مورد نظر یافت نشد',
-        statusCode: 400,
-        error: 'آدرس مورد نظر یافت نشد',
-      };
-    }
-
-    let list;
-    for (let i of address.adresses) {
-      if (i._id == adressId) {
-        list = i;
-      }
-    }
-    console.log('address is >>>', address?.adresses);
-    return {
-      message: 'موفق',
-      statusCode: 200,
-      data: list,
-    };
-  }
-
-
-
-
-  async getAddressesByAdmin(nationalCode: string) {
-    const user = await this.userModel.findOne({ nationalCode });
-    if (!user) {
-      return {
-        message: 'کاربر پیدا نشد',
-        statusCode: 400,
-        error: 'کاربر پیدا نشد',
-      };
-    }
-    return {
-      message: '',
-      statusCode: 200,
-      data: user.adresses,
-    };
-  }
-
-
-  async updateAddress(userId: string, data: UpdateAddressDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      const user = await this.userModel.findById(userId).session(session);
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      const index = user.adresses.findIndex((i) => i._id == data.adressId);
-
-      if (index == -1) {
-        await session.abortTransaction();
-        return {
-          message: 'آدرس پیدا نشد',
-          statusCode: 400,
-          error: 'آدرس پیدا نشد',
-        };
-      }
-
-      console.log('findedAdress', user.adresses[index]);
-
-      user.adresses[index].adress = data.adress;
-      user.adresses[index].name = data.name;
-      user.adresses[index].plate = data.plate;
-      user.adresses[index].postCode = data.postCode;
-      user.adresses[index].unit = data.unit;
-
-      await user.save({ session });
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      return {
-        message: '',
-        statusCode: 200,
-        data: user.adresses,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-
-
-  async updateAddressByAdminInPhoneInvoice(nationalCode: string, data: UpdateAddressDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    console.log('bodyyyy', data)
-    try {
-      const user = await this.userModel.findOne({ nationalCode }).session(session);
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      const index = user.adresses.findIndex((i) => i._id == data.adressId);
-
-      if (index == -1) {
-        await session.abortTransaction();
-        return {
-          message: 'آدرس پیدا نشد',
-          statusCode: 400,
-          error: 'آدرس پیدا نشد',
-        };
-      }
-
-      console.log('findedAdress', user.adresses[index]);
-
-      user.adresses[index].adress = data.adress;
-      user.adresses[index].name = data.name;
-      user.adresses[index].plate = data.plate;
-      user.adresses[index].postCode = data.postCode;
-      user.adresses[index].unit = data.unit;
-      user.adresses[index].city = data.city;
-      user.adresses[index].province = data.province;
-
-      await user.save({ session });
-
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      let newAddress = await this.userModel.findOne({ nationalCode })
-
-      return {
-        message: '',
-        statusCode: 200,
-        data: newAddress?.adresses,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-  async deleteAddress(userId: string, adressId: string) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      console.log('its here for delete address >>>> ', adressId, userId);
-      const user = await this.userModel.findById(userId).session(session);
-
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      console.log('addressesss >>>> ', user.adresses);
-
-      let list: any = [];
-      for (let i of user.adresses) {
-        if (i._id != adressId) {
-          list.push(i);
-        }
-      }
-
-      await user.updateOne({ adresses: list }, { session });
-
-      let updated = await this.userModel.findById(userId).session(session);
-
-      console.log('addressesss >>>> ', updated?.adresses);
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      return {
-        message: '',
-        statusCode: 200,
-        data: updated?.adresses,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-
-
-
-  async deleteAddressByAdminInPhoneInvoice(nationalCode: string, adressId: string) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      console.log('its here for delete address >>>> ', adressId, nationalCode);
-      const user = await this.userModel.findOne({ nationalCode }).session(session);
-
-      if (!user) {
-        await session.abortTransaction();
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      console.log('addressesss >>>> ', user.adresses);
-
-      let list: any = [];
-      for (let i of user.adresses) {
-        if (i._id != adressId) {
-          list.push(i);
-        }
-      }
-
-      await user.updateOne({ adresses: list }, { session });
-
-      let updated = await this.userModel.findOne({ nationalCode }).session(session);
-
-      console.log('addressesss >>>> ', updated?.adresses);
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      return {
-        message: '',
-        statusCode: 200,
-        data: updated?.adresses,
-      };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      session.endSession();
-    }
-  }
-
-  async changeStatus(userId: string, identityStatus: number) {
-    const user = await this.userModel.findByIdAndUpdate(userId, {
-      identityStatus,
+  async updateUserInfo(userId: string, updateData: DeepPartial<User>) {
+    // ۱. پیدا کردن کاربر به همراه رلوشن‌ها برای آپدیت یکپارچه
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile', 'settings'],
     });
 
     if (!user) {
       return {
-        message: 'کاربر پیدا نشد',
-        statusCode: 400,
-        error: 'کاربر پیدا نشد',
+        statusCode : 400,
+        success: false,
+        message: 'User not found',
       };
     }
-    return {
-      message: '',
-      statusCode: 200,
-      data: user,
-    };
-  }
 
-  async deletAll() {
-    await this.userModel.deleteMany();
-    return {
-      message: 'ok',
-      statusCode: 200,
-    };
-  }
+    user.isUpdated = true;
+    // ۲. ترکیب اطلاعات جدید با اطلاعات فعلی کاربر
+    // متد merge مقادیر undefined را نادیده می‌گیرد و فقط فیلدهای ارسال شده را آپدیت می‌کند
+    this.userRepository.merge(user, updateData);
 
-
-  async getByNationalCodeInternal(body: any) {
-
-    if (!body.nationalCode) {
-      return {
-        message: 'لطفا داده های صحیح را ارسال کنید',
-        statusCode: 400
-      }
-    }
-
-    let nationalCode = body.nationalCode
-
-    let user = await this.userModel.findOne({ nationalCode })
-    console.log({ message: 'user is here', user })
-    const session: ClientSession = await this.userModel.db.startSession();
-    session.startTransaction();
+    // ۳. ذخیره در دیتابیس
     try {
-      if (!user) {
-        console.log({ message: 'user not exist' })
-        user = await new this.userModel({
-          firstName: body.firstName,
-          lastName: body.lastName,
-          phoneNumber: body.phoneNumber,
-          fatherName: body.fatherName,
-          nationalCode: body.nationalCode,
-          birthDate: body.birthDate,
-          authStatus: body.authStatus,
-          identityStatus: body.identityStatus,
-        }).save({ session })
-        const wallet = {
-          owner: user._id,
-          balance: 0,
-          goldWeight: '0',
-        };
-        console.log({ message: 'user created', user })
+      const updatedUser = await this.userRepository.save(user);
 
-        await this.internalService.createWallet(wallet)
-        console.log({ message: 'wallet created for user' })
-
-      }
-
-      await session.commitTransaction()
+      this.logger.log(`User with ID ${userId} updated successfully`);
 
       return {
-        message: 'done',
-        statusCode: 200,
-        data: user,
-        code: 1
-      }
-
-    } catch (error) {
-      console.log('error in fucking create new user from order and installment', error)
-      await session.abortTransaction()
-      return {
-        message: 'خطای داخلی سرور',
-        statusCode: 500,
-        error: 'حطای داخلی سرور',
-        code: 0
-      }
-    } finally {
-      await session.endSession()
-    }
-  }
-
-
-
-  async   getByNationalCodeInternalForCreateOrder(body: any) {
-
-    if (!body.nationalCode) {
-      return {
-        message: 'لطفا داده های صحیح را ارسال کنید',
-        statusCode: 400
-      }
-    }
-
-    let nationalCode = body.nationalCode
-
-    let user = await this.userModel.findOne({ nationalCode })
-    try {
-      if (!user) {
-        return {
-          message: 'کاربر یافت نشد',
-          statusCode: 500,
-          error: 'کاربر یافت نشد',
-          code: 2
-        }
-      }
-      return {
-        message: 'done',
-        statusCode: 200,
-        data: user,
-        code: 1
-      }
-
-    } catch (error) {
-      console.log('error in fucking create new user from order and installment', error)
-      return {
-        message: 'خطای داخلی سرور',
-        statusCode: 500,
-        error: 'حطای داخلی سرور',
-        code: 0
-      }
-    }
-  }
-
-
-
-  async findById(userId: string) {
-    // const session: ClientSession = await this.userModel.db.startSession();
-    // session.startTransaction();
-    try {
-      const user = await this.userModel.findById(userId);
-      // const user = await this.userModel.findById(userId).session(session)
-      if (!user) {
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-      // await session.commitTransaction();
-      return {
-        message: 'ثبت نام شما کامل شد',
-        statusCode: 200,
-        data: user,
-      };
-    } catch (error) {
-      console.log('error', error);
-      // await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      console.log('its here for commig');
-      // session.endSession();
-    }
-  }
-
-
-
-  /**
-   * this end point is for checking nationalCode identity of user from admin pannel 
-   * @param nationalCode 
-  */
-  async checkIdentityByAdmin(phoneNumber: string) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      const user = await this.userModel.findOne({ phoneNumber: phoneNumber })
-
-      console.log('user after getting', user);
-      if (!user) {
-        const oldUser =
-          await this.internalService.checkExistOldUser(phoneNumber);
-        console.log(oldUser);
-
-        if (oldUser.statusCode == 2) {
-          await session.abortTransaction();
-          return {
-            message: 'خطای داخلی',
-            statusCode: 500,
-            error: 'حطای داخلی'
-          };
-        }
-        if (oldUser && oldUser.statusCode == 1) {
-          console.log('oldUser', oldUser);
-
-          const oldNewUser = await this.userModel.create({
-            phoneNumber,
-            firstName: oldUser.data.firstName,
-            lastName: oldUser.data.lastName,
-            fatherName: oldUser.data.fatherName,
-            nationalCode: oldUser.data.nationalCode,
-            birthDate: oldUser.data.birthDate,
-            authStatus: 3,
-            identityStatus: 1,
-          });
-
-          const wallet = {
-            owner: oldNewUser[0]._id,
-            balance: 0,
-            goldWeight: oldUser.data.goldWeight,
-          };
-
-          // Create wallet through internal service
-          await this.internalService.createWallet(wallet);
-
-          // Commit the transaction
-          await session.commitTransaction();
-          return {
-            message: 'کاربر با موفقیت اضافه شد',
-            statusCode: 200,
-            data: {
-              user: oldNewUser,
-              exist: true
-            }
-          };
-        } else if (oldUser.statusCode == 0) {
-
-          // Commit the transaction
-          await session.commitTransaction();
-          return {
-            message: 'کاربر وجود ندارد',
-            statusCode: 200,
-            data: {
-              user: {},
-              exist: false
-            }
-          };
-        }
-      }
-
-      await session.commitTransaction();
-      return {
-        message: 'کاربر وجود دارد',
-        statusCode: 200,
-        data: {
-          user: user,
-          exist: true
-        }
-      };
-    } catch (error) {
-      console.log(error);
-      await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم'
-      }
-    } finally {
-      session.endSession();
-    }
-  }
-
-
-  async identityOfUserFromAdmin(body: IdentityDto) {
-    try {
-
-      let { phoneNumber, nationalCode, birthDate } = body
-
-      let existanceOfUserPhone = await this.userModel.find({ phoneNumber })
-      let existanceOfUser = await this.userModel.find({ nationalCode })
-
-      if (existanceOfUser.length > 0) {
-        return {
-          message: 'کاربر با این کد ملی قبلا ثبت نام کرده',
-          statusCode: 400,
-          error: 'کاربر با این کد ملی قبلا ثبت نام کرده'
-        }
-      }
-      if (existanceOfUserPhone.length > 0) {
-        return {
-          message: 'کاربر با این شماره موبایل قبلا ثبت نام کرده',
-          statusCode: 400,
-          error: 'کاربر با این شماره موبایل قبلا ثبت نام کرده'
-        }
-      }
-
-      let responseOfIdentity = await this.identityOfUser.identityCheck(phoneNumber, nationalCode, birthDate)
-
-      if (!responseOfIdentity) {
-        return {
-          message: 'خطای داخلی',
-          statusCode: 500,
-          error: 'خطای داخلی'
-        }
-      }
-
-      if (responseOfIdentity.status === 3) {
-        // user information is wrong
-        return {
-          message: 'اطلاعات کاربر نادرست است',
-          statusCode: 500,
-          error: 'اطلاعات کاربر نادرست است'
-        }
-
-      }
-
-
-      if (responseOfIdentity.status === 2) {
-        return {
-          message: 'شماره تلفن با کد ملی مطابقت ندارد',
-          statusCode: 400,
-          error: 'شماره تلفن با کد ملی مطابقت ندارد'
-        }
-      }
-
-      if (responseOfIdentity.status == 1 || responseOfIdentity.status == 4) {
-        console.log('its fucking herrrrrrrrrr', responseOfIdentity)
-        return {
-          message: 'سیستم احراز هویت موقتا در دسترس نمی باشد',
-          statusCode: 503,
-          error: 'سیستم احراز هویت موقتا در دسترس نمی باشد'
-        }
-      }
-
-      if (responseOfIdentity.status === 6 || responseOfIdentity.status === 5) {
-
-        return {
-          message: 'کاربر با موفقیت احراز شد',
-          statusCode: 200,
-          data: responseOfIdentity.saveUser
-        }
-      }
-    } catch (error) {
-      console.log('error in identifing user >>>>', error)
-      return {
-        message: 'خطای داخلی سیستم',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم'
-      }
-    }
-  }
-
-
-
-
-  async findByIdByAdmin(userId: string) {
-    // const session: ClientSession = await this.userModel.db.startSession();
-    // session.startTransaction();
-    try {
-      console.log('findby id ...... ', userId);
-      const user = await this.userModel.findById(userId);
-      // const user = await this.userModel.findById(userId).session(session)
-      if (!user) {
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-      // await session.commitTransaction();
-      return {
-        message: 'ثبت نام شما کامل شد',
-        statusCode: 200,
-        data: user,
-      };
-    } catch (error) {
-      console.log('error', error);
-      // await session.abortTransaction();
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    } finally {
-      console.log('its here for commig');
-      // session.endSession();
-    }
-  }
-
- async getUserByNationalCode(nationalCode: string) {
-  try {
-    console.log(nationalCode, "national code is here");
-    console.log(typeof nationalCode, "type of national code");
-    
-    let query;
-    let thisUser;
-
-    if (mongoose.Types.ObjectId.isValid(nationalCode)) {
-      console.log('come into this')
-      thisUser = await this.userModel.findById(nationalCode)
-    } else {
-      console.log('come into this22')
-      thisUser = await this.userModel.findOne({
-        nationalCode : nationalCode
-      })
-    }
-        
-    if (!thisUser) {
-      return {
-        message: 'user not found',
-        statusCode: 400,
-        data: null,
-      };
-    }
-    
-    return {
-      message: 'successfully done',
-      statusCode: 200,
-      data: thisUser,
-    };
-  } catch (error) {
-    console.log('Error in getUserByNationalCode:', error);
-    return {
-      message: 'internal server error',
-      statusCode: 500,
-      data: null,
-    };
-  }
-}
-
-
-  
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
-
-  findAll() {
-    return `This action returns all user`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
-  }
-  
-  async activation(userId: string) {
-    try {
-      const user = await this.userModel.findById(userId);
-
-      if (!user) {
-        return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
-        };
-      }
-
-      if (user.isActive) {
-        await user.updateOne({ isActive: false });
-      } else {
-        await user.updateOne({ isActive: true });
-      }
-
-      const updatedUser = await this.userModel.findById(userId);
-
-      return {
-        message: 'done',
-        statusCode: 200,
+        statusCode : 200,
+        success: true,
+        message: 'User updated successfully',
         data: updatedUser,
       };
     } catch (error) {
-      console.log('error', error);
+      this.logger.error(`Error updating user ${userId}:`, error);
       return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
+        success: false,
+        statusCode : 500,
+        message: 'Failed to update user',
       };
     }
   }
-
-
 
   
-
-
-
-
-    async createSpeceficUserForTestKafka(name: string) {
+  async getUserInfo(userId: string) {
     try {
-
-
-      const newUser = await this.userModel.create({
-        lastName:"test-kafka",
-        firstName:name,
-        phoneNumber:"09111111111",
-        nationalCode: "5566669182"
-
-      })
-
-
-      console.log(newUser, "///// new user is here ");
-      
-
-      return {
-        message: 'done',
-        statusCode: 200,
-        data: newUser,
-      };
-    } catch (error) {
-      console.log('error', error);
-      return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
-      };
-    }
-  }
-
-  async updatePassword(userId: string, currentPassword: string, newPassword: string) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      const user = await this.userModel.findById(userId).session(session);
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        select: [
+          'id',
+          'email',
+          'firstName',
+          'lastName',
+          'followersCount',
+          'followingCount',
+          'role',
+          'phone',
+          'isSuspend',
+          'isUpdated',
+          'isVerify',
+          'createdAt',
+          'location',
+        ],
+        relations: ['profile'],
+      });
 
       if (!user) {
-        await session.abortTransaction();
         return {
-          message: 'کاربر پیدا نشد',
-          statusCode: 400,
-          error: 'کاربر پیدا نشد',
+          statusCode : 400,
+          success: false,
+          message: 'User not found',
         };
       }
-
-      if (!user.password) {
-        await session.abortTransaction();
-        return {
-          message: 'برای این کاربر رمز عبور ثبت نشده است',
-          statusCode: 400,
-          error: 'برای این کاربر رمز عبور ثبت نشده است',
-        };
-      }
-
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
-      if (!isPasswordValid) {
-        await session.abortTransaction();
-        return {
-          message: 'رمز عبور فعلی نادرست است',
-          statusCode: 400,
-          error: 'رمز عبور فعلی نادرست است',
-        };
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      const updatedUser = await this.userModel
-        .findByIdAndUpdate(userId, { password: hashedPassword }, { session, new: true })
-        .session(session);
-
-      await session.commitTransaction();
 
       return {
-        message: 'رمز عبور شما با موفقیت تغییر یافت',
-        statusCode: 200,
-        data: updatedUser ? {
-          _id: updatedUser._id,
-          phoneNumber: updatedUser.phoneNumber,
-        } : {},
+        statusCode : 200,
+        success: true,
+        message: 'User founded',
+        data: user,
       };
-    } catch (error) {
-      console.log('error', error);
-      await session.abortTransaction();
+    } catch (error: any) {
       return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
+        statusCode : 500,
+        success: false,
+        message: 'Error',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
-    } finally {
-      session.endSession();
     }
   }
 
-    async updateUserInfoByNationalCode(body: updateUserInfoByNationalCodeDto) {
+  async getAllUsers() {
     try {
-      
-      let existanceAll = await this.userModel.find({nationalCode : body.nationalCode})
-      
-      await this.kafkaService.sendMessage('update-user-by-ecommerce', {
-        nationalCode: body.nationalCode,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        phoneNumber: body.phoneNumber
-      })
+      const users = await this.userRepository.find({
+        skip: 0,
+        take: 50,
+        relations: { profile: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          isVerify: true,
+          isSuspend: true,
+          role: true,
+          phone: true,
+          profile: {
+            id: true,
+            avatar: true,
+          },
+        },
+      });
 
-      // await this.userModel.findByIdAndDelete('68ac2dbe7be6044751f654cf')
-      
-      console.log('existance of user' , existanceAll)
-      
-      let userExistance = await this.userModel.findOne({
-        nationalCode: body.nationalCode,
-      })
+      return {
+        statusCode : 200,
+        success: true,
+        data: users,
+        message: 'Users found!',
+      };
+    } catch (error: any) {
+      return {
+        statusCode:500,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 
-      if (!userExistance) {
-        return {
-          message: 'کد ملی در اپلیکیشن وجود ندارد.',
-          statusCode: 200,
-        };
+  async suspendUser(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return { success: false, statusCode : 400 ,message: 'User not found' };
       }
 
-      const user = await this.userModel.findOneAndUpdate(
-        { nationalCode: body.nationalCode },
-        {
-          firstName: (userExistance.firstName != body.firstName) ? body.firstName : userExistance.firstName,
-          lastName: (userExistance.lastName != body.lastName) ? body.lastName : userExistance.lastName,
-          phoneNumber: (userExistance.phoneNumber != body.phoneNumber) ? body.phoneNumber : userExistance.phoneNumber
-        },
-        { new: true }
-      );
-      
-      await this.kafkaService.sendMessage('update-user-by-ecommerce' , {
-        nationalCode : user?.nationalCode,
-        firstName : user?.firstName,
-        lastName : user?.lastName,
-        phoneNumber : user?.phoneNumber
-      })
-
+      if (user?.isSuspend) {
+        await this.userRepository.update(userId, { isSuspend: false });
+        return {
+          statusCode : 200,
+          success: true,
+          message: 'User not suspend',
+        };
+      } else {
+        await this.userRepository.update(userId, { isSuspend: true });
+        return {
+          statusCode : 200,
+          success: true,
+          message: 'User is suspend',
+        };
+      }
+    } catch (error: any) {
       return {
-        message: 'اطلاعات کاربر با موفقیت به روز رسانی شد.',
-        statusCode: 200,
-        data: user,
+        statusCode : 500,
+        success: false,
+        message: '',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
-    } catch (error) {
-      console.log('error', error);
+    }
+  }
+
+  async changeRole(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      if (user?.role === UserRole.USER) {
+        await this.userRepository.update(userId, { role: UserRole.TRADER });
+        return {
+          success: true,
+          message: 'The user role was changed to Trader.',
+        };
+      } else {
+        await this.userRepository.update(userId, { role: UserRole.USER });
+        return {
+          success: true,
+          message: 'The user role was changed to User.',
+        };
+      }
+    } catch (error: any) {
       return {
-        message: 'مشکلی از سمت سرور به وجود آمده',
-        statusCode: 500,
-        error: 'خطای داخلی سیستم',
+        success: false,
+        message: '',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

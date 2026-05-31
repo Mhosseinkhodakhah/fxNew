@@ -1,53 +1,50 @@
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from './user/user.module';
+import { KafkaService } from './kafka/kafka.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { RedisService } from './redis/redis.service';
 import { ConfigModule } from '@nestjs/config';
-import { MongooseModule, Schema } from '@nestjs/mongoose';
-import { UserModule } from './user/user.module';
-import { AuthModule } from './auth/auth.module';
-// import { HttpService } from './http/http.service';
-import { CacheModule } from '@nestjs/cache-manager';
+import configuration from './common/config';
 import { WinstonModule } from 'nest-winston';
-import { winstonAsyncConfig } from 'configs/winston.config';
-import { RabbitMqService } from './rabbitmq/rabbitmq.service';
-import { UserSchema2 } from './user/entities/user.entity';
-import { RedisServiceService } from './redis-service/redis-service.service';
-import { TokenizeService } from './tokenize/tokenize.service';
-import { JwtService } from '@nestjs/jwt';
-import { InterserviceService } from './interservice/interservice.service';
-import { LoggingInterceptor } from './interceptors/logging.interceptor';
-import { LoggerService } from './logger/logger.service';
-import { KafkaModule } from './kafka/kafka.module';
-import { Module } from '@nestjs/common/decorators/modules/module.decorator';
-import { IdentityService } from './identity/identity.service';
-import { KafkaProducerService } from './kafka/kafka.producer';
-import { UserService } from './user/user.service';
-
+import { winstonConfig } from './common/winston.config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    WinstonModule.forRootAsync(winstonAsyncConfig),
-    MongooseModule.forRoot(process.env.MONGO_URI!),
-    MongooseModule.forFeature([{ name: 'userM', schema: UserSchema2 }]),
-    KafkaModule,
-    UserModule,
-    AuthModule,
+    WinstonModule.forRoot(winstonConfig),
+    ConfigModule.forRoot({
+      isGlobal:true,
+      load: [configuration],
+    }),
+    ClientsModule.register([
+      {
+        name: 'KAFKA_SERVICE',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'user-service',
+            brokers: ['localhost:9092'],
+          },
+          consumer: {
+            groupId: 'user-service-consumer',
+          },
+        },
+      },
+    ]),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost', // چون خارج از داکر ران می‌کنیم
+      port: 5432,
+      username: 'user',
+      password: '25255225',
+      database: 'user_db',
+      autoLoadEntities: true, // بسیار مهم: این گزینه باعث می‌شود Entityها را خودکار پیدا کند
+      synchronize: true, // برای محیط توسعه عالی است (جداول را خودکار می‌سازد)
+    }),
+    UsersModule,
+    UsersModule,
   ],
-  controllers: [AppController],
-  providers: [
-    UserService,
-    KafkaProducerService,
-    AppService,
-    RabbitMqService,
-    RedisServiceService,
-    TokenizeService,
-    JwtService,
-    InterserviceService,
-    LoggingInterceptor,
-    LoggerService,
-    IdentityService,
-  ],
+  controllers: [],
+  providers: [KafkaService, RedisService],
 })
 export class AppModule {}
-
-

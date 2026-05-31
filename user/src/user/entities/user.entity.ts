@@ -1,106 +1,71 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-import * as mongoose from 'mongoose';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Profile } from './profile.entity';
+import { Settings } from './settings.entity';
+import { UserRole } from 'src/common/types/enum';
 
-// export type UserDocument = User & Document;
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-export interface UserDocument extends Document {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  email: string;
-  password: string;
-  pictureProfile: string;
-  nationalCode: string;
-  birthDate: string;
-  authStatus: number; //? 0 just init - 1 compelteProfile - 2 exist in old service
-  isActive: boolean;
-  adresses: {
-    _id: string;
-    adress: string;
-    postCode: string;
-    name: string;
-    plate: number;
-    unit: number;
-    city: string;
-    province: string;
-  }[];
-  identityStatus: number;
-
-  isRealyVerified: boolean;
-
-}
-
-
-
-@Schema({ timestamps: true })
-export class User2 {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, auto: true })
-  _id: string;
-
-  @Prop({ type: mongoose.Schema.Types.String })
-  firstName: string;
-
-  @Prop({ type: mongoose.Schema.Types.String })
-  lastName: string;
-
-  @Prop({ type: mongoose.Schema.Types.String, required: true , unique : true })
-  phoneNumber: string;
-
-  @Prop({ type: mongoose.Schema.Types.String })
+  @Column({ unique: true })
   email: string;
 
-  @Prop({ type: mongoose.Schema.Types.String })
-  fatherName: string;
+  @Column({ nullable: true })
+  firstName: string;
 
-  @Prop({ type: mongoose.Schema.Types.String })
-  password: string;
+  @Column({ nullable: true })
+  lastName: string;
 
-  @Prop({ type: mongoose.Schema.Types.String })
-  pictureProfile: string;
+  @Column({ nullable: true })
+  phone: string;
 
-  @Prop({ type: mongoose.Schema.Types.String , unique : true})
-  nationalCode: string;
-  
-  @Prop({ type: mongoose.Schema.Types.String })
-  birthDate: string;
+  @Column({ type: 'boolean', default: false })
+  isSuspend: boolean;
 
-  @Prop({
-    type: [
-      {
-        adress: { type: String },
-        postCode: { type: String },
-        name: { type: String },
-        plate: { type: Number },
-        unit: { type: Number },
-        province: { type: String },
-        city: { type: String },
-      },
-    ],
+  @Column({ type: 'boolean', default: false })
+  isVerify: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
   })
-  adresses: {
-    adress: string;
-    postCode: string;
-    name: string;
-    plate: number;
-    unit: number;
-    city: string;
-    province: string;
-  }[];
+  role: UserRole;
 
-  @Prop({ type: mongoose.Schema.Types.Number })
-  authStatus: number; //? 1 just init - 2 compelteProfile - 3 exist in old service
+  @Column({ nullable: true })
+  location: string;
 
-  @Prop({ type: mongoose.Schema.Types.Number, default: 0 }) //? 0 false   1->true  2-->pending
-  identityStatus: number;
+  @Column({ default: 0 })
+  followersCount: number;
 
-  @Prop({ default: true })
-  isActive: boolean;
+  @Column({ default: 0 })
+  followingCount: number;
 
-  @Prop({ default: true })
-  isRealyVerified: boolean;
+  @Column({ default: false })
+  isUpdated: boolean;
 
+  // رابطه با جدول پروفایل
+  @OneToOne(() => Profile, { cascade: true })
+  @JoinColumn()
+  profile: Profile;
+
+  // رابطه با جدول تنظیمات
+  @OneToOne(() => Settings, { cascade: true })
+  @JoinColumn()
+  settings: Settings;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
-
-export const UserSchema2 = SchemaFactory.createForClass(User2);
