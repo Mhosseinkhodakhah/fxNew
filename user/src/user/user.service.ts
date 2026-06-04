@@ -4,16 +4,24 @@ import type { LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import * as crypto from 'crypto';
 import { UserRole } from 'src/common/types/enum';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { JwtService } from '@nestjs/jwt';
+import { MagicLink } from './entities/magic-link.entity';
+
+
 
 @Injectable()
 export class UsersService {
 
   constructor(
-      @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(MagicLink)
+    private readonly magicLinkRepo: Repository<MagicLink>,
+    private jwtService : JwtService
   ) {}
 
   async findOrCreate(email: string) {
@@ -246,6 +254,122 @@ export class UsersService {
         message: '',
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+
+
+  async processMagicLinkRequest(email: string) {
+    // ۱. تولید توکن امن و رندوم (۳۲ بایت)
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // ۲. تنظیم زمان انقضا (مثلا ۱۵ دقیقه دیگر)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+    // ۳. ذخیره در دیتابیس
+    const magicLink = this.magicLinkRepo.create({
+      email,
+      token,
+      expiresAt,
+    });
+    await this.magicLinkRepo.save(magicLink);
+
+    // ۴. ساخت لینک کامل مجیک لینک
+    const frontendUrl = 'https://fxweb.sunbit.ir';
+    const fullMagicLink = `${frontendUrl}/verify?token=${token}`;
+
+    // // ۵. ارسال رویداد (Event) به کافکا برای سرویس ایمیل
+    // this.kafkaClient.emit(TOPICS.EMAIL.SEND_MAGIC_LINK, {
+    //   email,
+    //   token,
+    //   link: fullMagicLink,
+    // });
+
+    // ۶. بازگرداندن لینک به Gateway
+    return {
+      success: true,
+      message: 'We have sent a link to your email , Please check it.',
+      link: fullMagicLink,
+    };
+  }
+
+
+
+
+
+
+  /**
+   * its for verifying magic link
+   * @param token 
+   * @returns 
+   */
+  async verifyMagicLink(token: string) {
+    // پیدا کردن توکن در دیتابیس
+    const magicLink = await this.magicLinkRepo.findOne({
+      where: { token },
+    });
+
+    // ۱. بررسی وجود توکن
+    if (!magicLink) {
+      return {
+        statusCode: 400,
+        message: 'Invalid link.',
+      };
+    }
+
+    // ۲. بررسی استفاده نشدن قبلی توکن
+    if (magicLink.isUsed) {
+      return {
+        statusCode: 400,
+        message: 'Link has already been used.',
+      };
+    }
+
+    // ۳. بررسی انقضای زمانی توکن
+    if (magicLink.expiresAt < new Date()) {
+      return {
+        statusCode: 400,
+        message: 'Link has expired. Please request a new one.',
+      }
+    }
+
+    // ۴. علامت‌گذاری توکن به عنوان "استفاده شده"
+    magicLink.isUsed = true;
+    await this.magicLinkRepo.save(magicLink);
+
+    // ۵. 👈 ارتباط با سرویس یوزر برای پیدا کردن یا ساختن کاربر
+    try {
+      
+
+       let user = this.userRepository.create({
+        email : magicLink.email
+      })
+
+      await this.userRepository.save(user)
+
+      const payload = { id: user.id, email: user.email };
+      const accessToken = await this.jwtService.signAsync(payload);
+
+      // برگرداندن پاسخ موفقیت آمیز به همراه اطلاعات کاربر
+      return {
+        success: true,
+        message: 'Email verified successfully',
+        user: {
+          avatar: user?.profile?.avatar,
+          email: user.email,
+          isVerify: user?.isVerify,
+          role: user?.role,
+          firstName: user?.firstName,
+        },
+        accessToken, // 👈 دیتای کاربر از سرویس یوزر می‌آید
+      };
+    } catch (error) {
+      console.error('Error communicating with User service:', error);
+      return {
+        statusCode: 500,
+        message: 'Could not fetch or create user profile.',
+      }
     }
   }
 }

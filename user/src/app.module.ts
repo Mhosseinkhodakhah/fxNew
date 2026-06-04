@@ -4,10 +4,11 @@ import { UsersModule } from './user/user.module';
 // import { KafkaService } from './kafka/kafka.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RedisService } from './redis/redis.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './common/config';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './common/winston.config';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -15,6 +16,15 @@ import { winstonConfig } from './common/winston.config';
     ConfigModule.forRoot({
       isGlobal:true,
       load: [configuration],
+    }),
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule], // 👈 تزریق ConfigModule
+      inject: [ConfigService], // 👈 تزریق ConfigService
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET_KEY'),
+        signOptions: { expiresIn: '7d' },
+      }),
     }),
     // ClientsModule.register([
     //   {

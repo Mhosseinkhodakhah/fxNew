@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { DeepPartial } from 'typeorm';
 
@@ -13,8 +13,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('get-user')
-  async getUserInfo(@Payload() message: { userId: string }) {
-    return await this.usersService.getUserInfo(message.userId);
+  @UseGuards(AuthGuard)
+  async getUserInfo(@Req() req : any) {
+    return await this.usersService.getUserInfo(req.user._id);
   }
 
   @Post('update-user')
@@ -45,4 +46,27 @@ export class UsersController {
   async changeRole(@Payload() message: { id: string }) {
     return await this.usersService.changeRole(message.id);
   }
+
+
+  @Post('magic-link')
+  async handleMagicLink(@Payload() data: { email: string }) {
+    try {
+      // فراخوانی متد اصلی از سرویس
+      return await this.usersService.processMagicLinkRequest(data.email);
+    } catch (error) {
+      console.error('Error in Auth Service:', error);
+      throw error;
+    }
+  }
+
+  @Post('verify-magic-link')
+  async verifyMagicLink(@Payload() payload: { token: string }) {
+    try {
+      return await this.usersService.verifyMagicLink(payload.token);
+    } catch (error) {
+      console.error('Error in Auth Service:', error);
+      throw error;
+    }
+  }
+
 }
